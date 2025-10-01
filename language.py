@@ -1,0 +1,67 @@
+SUPPORTED_LANGS = ['ru', 'en']
+
+LANGUAGES = {
+    'ru': {
+        "language_name": "Русский",
+
+        # Меню/общие
+        "app_name": "Mirage",
+        "pause": "Пауза",
+        "resume": "Продолжить",
+        "next": "Следующая картинка",
+        "settings": "Настройки…",
+        "quit": "Выход",
+        "menu_language": "Язык",
+
+        # Настройки
+        "settings_title": "Mirage — Настройки",
+        "folder_label": "Папка с изображениями:",
+        "interval_label": "Интервал (минуты):",
+        "shuffle": "Случайный порядок",
+        "recursive": "Рекурсивно по подпапкам",
+        "use_selected": "Только выбранные изображения (если список не пустой)",
+        "pick_images": "Выбрать изображения…",
+        "selected_count": "Выбрано изображений: {count}",
+        "current_wallpaper": "Текущие обои",
+        "btn_save": "Сохранить",
+        "btn_cancel": "Отмена",
+        "app_info": "О программе…",
+
+        # About
+        "about_comments": "Утилита в трее для автоматической смены обоев рабочего стола.",
+        "about_website_label": "GitHub: Mirage",
+        "about_license": "MIT License",
+    },
+
+    'en': {
+        "language_name": "English",
+
+        # Menu/common
+        "app_name": "Mirage",
+        "pause": "Pause",
+        "resume": "Resume",
+        "next": "Next wallpaper",
+        "settings": "Settings…",
+        "quit": "Quit",
+        "menu_language": "Language",
+
+        # Settings
+        "settings_title": "Mirage — Settings",
+        "folder_label": "Images folder:",
+        "interval_label": "Interval (minutes):",
+        "shuffle": "Shuffle order",
+        "recursive": "Include subfolders",
+        "use_selected": "Use only selected images (if list not empty)",
+        "pick_images": "Pick images…",
+        "selected_count": "Selected images: {count}",
+        "current_wallpaper": "Current wallpaper",
+        "btn_save": "Save",
+        "btn_cancel": "Cancel",
+        "app_info": "About…",
+
+        # About
+        "about_comments": "Tray utility for automatic desktop wallpaper rotation.",
+        "about_website_label": "GitHub: Mirage",
+        "about_license": "MIT License",
+    }
+}
