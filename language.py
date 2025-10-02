@@ -14,7 +14,7 @@ LANGUAGES = {
         "menu_language": "Язык",
 
         # Настройки
-        "settings_title": "Mirage — Настройки",
+        "settings_title": "Настройки",
         "folder_label": "Папка с изображениями:",
         "interval_label": "Интервал (минуты):",
         "shuffle": "Случайный порядок",
@@ -25,12 +25,19 @@ LANGUAGES = {
         "current_wallpaper": "Текущие обои",
         "btn_save": "Сохранить",
         "btn_cancel": "Отмена",
-        "app_info": "О программе…",
+        "app_info": "О программе",
+        "formats_label": "Форматы",
+        "images_filter_title": "Изображения",
+        "filter_all": "Все файлы",
 
         # About
-        "about_comments": "Утилита в трее для автоматической смены обоев рабочего стола.",
+        "about_comments": "Автоматическая смена обоев рабочего стола.",
         "about_website_label": "GitHub: Mirage",
-        "about_license": "MIT License",
+        "about_license": (
+            "Лицензия: MIT\n\n"
+            "Разрешается свободное использование, копирование, изменение и распространение "
+            "при условии сохранения уведомления об авторских правах."
+        ),
     },
 
     'en': {
@@ -46,7 +53,7 @@ LANGUAGES = {
         "menu_language": "Language",
 
         # Settings
-        "settings_title": "Mirage — Settings",
+        "settings_title": "Settings",
         "folder_label": "Images folder:",
         "interval_label": "Interval (minutes):",
         "shuffle": "Shuffle order",
@@ -57,11 +64,18 @@ LANGUAGES = {
         "current_wallpaper": "Current wallpaper",
         "btn_save": "Save",
         "btn_cancel": "Cancel",
-        "app_info": "About…",
+        "app_info": "About app",
+        "formats_label": "Formats",
+        "images_filter_title": "Images",
+        "filter_all": "All files",
 
         # About
-        "about_comments": "Tray utility for automatic desktop wallpaper rotation.",
+        "about_comments": "Automatic change of desktop wallpaper.",
         "about_website_label": "GitHub: Mirage",
-        "about_license": "MIT License",
+        "about_license": (
+            "License: MIT\n\n"
+            "Free use, copying, modification, and distribution are permitted"
+            "as long as the copyright notice is preserved."
+        ),
     }
 }

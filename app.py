@@ -29,14 +29,31 @@ from gi.repository import Gio
 from language import LANGUAGES, SUPPORTED_LANGS
 
 APP_ID = "mirage.tray"
-APP_VERSION = "1.3.0"
+APP_VERSION = "1.1.0"
 APP_AUTHOR = "Oleg Pustovalov"
-APP_WEBSITE = "https://github.com/yourname/mirage"
+APP_WEBSITE = "https://github.com/OlegEgoism/Mirage"
 CONFIG_DIR = Path.home() / ".config" / "mirage"
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_FILE = CONFIG_DIR / "settings.json"
 ICON_FILE = Path(__file__).parent / "logo_app.png"
 SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
+
+
+def _format_exts_for_label(exts: set[str]) -> str:
+    """'.jpg' -> 'JPG', join with ', '"""
+    return ", ".join(sorted({e.lstrip(".").upper() for e in exts}))
+
+
+def _gtk_patterns_for_exts(exts: set[str]) -> List[str]:
+    """Сформировать паттерны для Gtk.FileFilter (оба регистра)."""
+    pats: List[str] = []
+    for e in exts:
+        low = e.lower()
+        up = e.upper()
+        pats.append(f"*{low}")
+        if up != low:
+            pats.append(f"*{up}")
+    return pats
 
 
 @dataclass
@@ -109,13 +126,15 @@ class SettingsDialog(Gtk.Dialog):
     def __init__(self, parent: Optional[Gtk.Window], settings: Settings, on_save, T, current_wallpaper: Optional[str]):
         super().__init__(title=T["settings_title"], transient_for=parent, flags=0)
         self.set_modal(True)
-        self.set_default_size(600, 440)
+        self.set_default_size(320, 460)
         self.settings = settings
         self.on_save = on_save
         self.T = T
+
         content = self.get_content_area()
         self.grid = Gtk.Grid(column_spacing=10, row_spacing=10, margin=12)
         content.add(self.grid)
+
         self.lbl_folder = Gtk.Label()
         self.lbl_folder.set_halign(Gtk.Align.START)
         self.btn_folder = Gtk.FileChooserButton(action=Gtk.FileChooserAction.SELECT_FOLDER)
@@ -127,7 +146,9 @@ class SettingsDialog(Gtk.Dialog):
 
         self.lbl_interval = Gtk.Label()
         self.lbl_interval.set_halign(Gtk.Align.START)
-        adj = Gtk.Adjustment(value=self.settings.interval_minutes, lower=1, upper=1440, step_increment=1, page_increment=10)
+        adj = Gtk.Adjustment(
+            value=self.settings.interval_minutes, lower=1, upper=1440, step_increment=1, page_increment=10
+        )
         self.spin_interval = Gtk.SpinButton(adjustment=adj, climb_rate=1, digits=0)
         self.spin_interval.set_numeric(True)
 
@@ -149,10 +170,14 @@ class SettingsDialog(Gtk.Dialog):
         self.btn_pick = Gtk.Button()
         self.btn_pick.connect("clicked", self._pick_images)
 
+        self.lbl_formats = Gtk.Label()
+        self.lbl_formats.set_halign(Gtk.Align.START)
+        self.lbl_formats.get_style_context().add_class("dim-label")
+
         self.lbl_preview = Gtk.Label()
         self.lbl_preview.set_halign(Gtk.Align.START)
         self.preview = Gtk.Image()
-        self.preview.set_size_request(200, 120)
+        self.preview.set_size_request(220, 130)
 
         self.btn_box = Gtk.Box(spacing=6)
         self.btn_save = Gtk.Button()
@@ -168,19 +193,27 @@ class SettingsDialog(Gtk.Dialog):
 
         self.grid.attach(self.lbl_folder, 0, 0, 1, 1)
         self.grid.attach(self.btn_folder, 1, 0, 1, 1)
+
         self.grid.attach(self.lbl_interval, 0, 1, 1, 1)
         self.grid.attach(self.spin_interval, 1, 1, 1, 1)
+
         self.grid.attach(self.chk_shuffle, 0, 2, 2, 1)
         self.grid.attach(self.chk_recursive, 0, 3, 2, 1)
         self.grid.attach(self.chk_use_selected, 0, 4, 2, 1)
+
         self.grid.attach(self.btn_pick, 1, 5, 1, 1)
         self.grid.attach(self.lbl_selected_count, 0, 6, 2, 1)
-        self.grid.attach(self.lbl_preview, 0, 7, 1, 1)
-        self.grid.attach(self.preview, 1, 7, 1, 1)
-        self.grid.attach(self.btn_box, 0, 8, 2, 1)
+
+        self.grid.attach(self.lbl_formats, 0, 7, 2, 1)
+
+        self.grid.attach(self.lbl_preview, 0, 8, 1, 1)
+        self.grid.attach(self.preview, 1, 8, 1, 1)
+
+        self.grid.attach(self.btn_box, 0, 9, 2, 1)
 
         self._apply_language(T)
         self._update_selected_label()
+        self._update_formats_label()
         self._update_preview(current_wallpaper)
         self.show_all()
 
@@ -198,15 +231,21 @@ class SettingsDialog(Gtk.Dialog):
         self.btn_save.set_label(self.T["btn_save"])
         self.btn_cancel.set_label(self.T["btn_cancel"])
         self.btn_about.set_label(self.T["app_info"])
+        self._update_formats_label()
 
     def _update_selected_label(self):
         self.lbl_selected_count.set_text(self.T["selected_count"].format(count=len(self.settings.selected)))
+
+    def _update_formats_label(self):
+        title = self.T.get("formats_label", "Форматы")
+        exts_str = _format_exts_for_label(SUPPORTED_EXTS)
+        self.lbl_formats.set_text(f"{title}: {exts_str}")
 
     def _update_preview(self, path: Optional[str]):
         if path and Path(path).exists():
             try:
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    path, width=200, height=120, preserve_aspect_ratio=True
+                    path, width=220, height=130, preserve_aspect_ratio=True
                 )
                 self.preview.set_from_pixbuf(pixbuf)
             except Exception:
@@ -229,11 +268,19 @@ class SettingsDialog(Gtk.Dialog):
             dialog.set_current_folder(self.btn_folder.get_filename() or self.settings.folder)
         except Exception:
             pass
+
+        exts_str = _format_exts_for_label(SUPPORTED_EXTS)
+        filter_title_base = self.T.get("images_filter_title", "Изображения")
         flt = Gtk.FileFilter()
-        flt.set_name("Images")
-        for ext in sorted(SUPPORTED_EXTS):
-            flt.add_pattern(f"*{ext}")
+        flt.set_name(f"{filter_title_base} ({exts_str})")
+        for patt in _gtk_patterns_for_exts(SUPPORTED_EXTS):
+            flt.add_pattern(patt)
         dialog.add_filter(flt)
+
+        flt_all = Gtk.FileFilter()
+        flt_all.set_name(self.T.get("filter_all", "Все файлы"))
+        flt_all.add_pattern("*")
+        dialog.add_filter(flt_all)
 
         resp = dialog.run()
         if resp == Gtk.ResponseType.OK:
@@ -346,13 +393,17 @@ class MirageApp:
             lang_menu.append(sub)
         lang_item.set_submenu(lang_menu)
         menu.append(lang_item)
+
         item_settings = Gtk.MenuItem(label=self.T["settings"])
         item_settings.connect("activate", lambda *_: self.open_settings())
         menu.append(item_settings)
+
         menu.append(Gtk.SeparatorMenuItem())
+
         item_quit = Gtk.MenuItem(label=self.T["quit"])
         item_quit.connect("activate", self.quit)
         menu.append(item_quit)
+
         menu.show_all()
         return menu
 
