@@ -1,5 +1,5 @@
 <h1>
-Mirage Application
+"Mirage" Application
 </h1>
 
 <img src="logo_app.png" width="10%" />
