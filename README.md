@@ -60,12 +60,32 @@ pip install -r requirements.txt
 python3 app.py
 ```
 
-<h2 style="color: chocolate"> Build into a Standalone Binary </h2> <h3>💡 Nuitka / PyInstaller</h3>
+<h2 style="color: chocolate">
+    Building app
+    <span style="color: red">(recommended)</span>
+</h2>
+<h3>💡 Launch file "build.sh" (assembly time up to 5 minutes)</h3>
 
 ```bash
-python3 -m nuitka --onefile --enable-plugin=gi --output-filename=Mirage main.py
+chmod +x build_nuitka.sh
+./build_nuitka.sh
 ```
 
+<h3>💡 Checking the created file SyMo-onefile</h3>
+
 ```bash
-pyinstaller --onefile --name Mirage main.py
+ls -l *Mirage-onefile
 ```
+
+<h2 style="color: chocolate">
+  Remove
+  <span style="color: red">(recommended)</span>
+</h2>
+
+```bash
+chmod +x uninstall-mirage.sh
+./uninstall-mirage.sh
+```
+
+
+
