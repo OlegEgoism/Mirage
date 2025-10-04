@@ -73,7 +73,7 @@ chmod +x build_nuitka.sh
 ./build_nuitka.sh
 ```
 
-<h3>💡 Checking the created file SyMo-onefile</h3>
+<h3>💡 Checking the created file Mirage-onefile</h3>
 
 ```bash
 ls -l *Mirage-onefile
@@ -85,9 +85,8 @@ ls -l *Mirage-onefile
 </h2>
 
 ```bash
-chmod +x uninstall-mirage.sh
-./uninstall-mirage.sh
+chmod +x uninstall_mirage.sh
+./uninstall_mirage.sh [--purge] [--all] [--yes] [--dry-run]
 ```
-
 
 

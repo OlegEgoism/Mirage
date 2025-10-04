@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Nuitka build for Mirage (resources + single desktop entry + autostart)
+# Nuitka build for Mirage (resources + single desktop entry)
 # Проектная структура:
 #   app.py
 #   language.py
@@ -61,15 +61,11 @@ else
 fi
 echo "Using Nuitka command: $NUITKA_CMD"
 
-# ---------- Пути меню/автозапуска ----------
+# ---------- Пути меню (без автозапуска!) ----------
 APP_MENU_DIR="$HOME/.local/share/applications"
-AUTOSTART_DIR="$HOME/.config/autostart"
-mkdir -p "$APP_MENU_DIR" "$AUTOSTART_DIR"
+mkdir -p "$APP_MENU_DIR"
 
 DESKTOP_MAIN="${APP_MENU_DIR}/${PACKAGE_NAME}.desktop"
-DESKTOP_AUTOSTART="${AUTOSTART_DIR}/${PACKAGE_NAME}.desktop"
-LEGACY_ONE_MAIN="${APP_MENU_DIR}/${PACKAGE_NAME}-onefile.desktop"
-LEGACY_ONE_AUTOSTART="${AUTOSTART_DIR}/${PACKAGE_NAME}-onefile.desktop"
 
 # ---------- Очистка предыдущих сборок ----------
 rm -rf "${PACKAGE_NAME}.dist" "${PACKAGE_NAME}.build" "${PACKAGE_NAME}.onefile-build" \
@@ -77,13 +73,12 @@ rm -rf "${PACKAGE_NAME}.dist" "${PACKAGE_NAME}.build" "${PACKAGE_NAME}.onefile-b
 rm -f  "${PACKAGE_NAME}" "${PACKAGE_NAME}.bin" "${PACKAGE_NAME}-compiled" \
        "${PACKAGE_NAME}-onefile" "${PACKAGE_NAME}-run"
 
-# ---------- Утилита записи .desktop ----------
-write_desktop_file() {
+# ---------- Утилита записи .desktop (только меню) ----------
+write_desktop_file_menu() {
   local path="$1"       # полный путь к .desktop
   local name="$2"       # Name=
   local exec_cmd="$3"   # Exec=
   local icon_path="$4"  # Icon=
-  local autostart="$5"  # "yes" -> X-GNOME-Autostart-enabled=true
 
   {
     echo "[Desktop Entry]"
@@ -97,12 +92,9 @@ write_desktop_file() {
     echo "Terminal=false"
     echo "Categories=Utility;"
     echo "TryExec=${exec_cmd%% *}"
-    if [[ "$autostart" == "yes" ]]; then
-      echo "X-GNOME-Autostart-enabled=true"
-    fi
   } > "$path"
   chmod +x "$path"
-  echo "📝 Wrote desktop file: $path"
+  echo "📝 Wrote desktop file (menu only): $path"
 }
 
 # ---------- Standalone ----------
@@ -166,7 +158,7 @@ else
   echo "⚠️ Onefile build failed or skipped; standalone is ready."
 fi
 
-# ---------- .desktop + автозапуск (один ярлык) ----------
+# ---------- .desktop (только меню; автозапуском управляет приложение) ----------
 ABS_ONEFILE_PATH="$(pwd)/${PACKAGE_NAME}-onefile"
 ABS_RUNNER_PATH="$(pwd)/${PACKAGE_NAME}-run"
 
@@ -188,12 +180,13 @@ else
   FINAL_ICON=""
 fi
 
-# Удаляем возможные устаревшие ярлыки
-rm -f "$LEGACY_ONE_MAIN" "$LEGACY_ONE_AUTOSTART"
+# Удаляем возможные устаревшие автозапуск-ярлыки из прошлых сборок
+LEGACY_ONE_AUTOSTART="$HOME/.config/autostart/${PACKAGE_NAME}-onefile.desktop"
+LEGACY_AUTOSTART="$HOME/.config/autostart/${PACKAGE_NAME}.desktop"
+rm -f "$LEGACY_ONE_AUTOSTART" "$LEGACY_AUTOSTART"
 
-# Создаём один .desktop для меню и один для автозапуска
-write_desktop_file "$DESKTOP_MAIN" "${PACKAGE_NAME}" "$FINAL_EXEC" "$FINAL_ICON" "no"
-write_desktop_file "$DESKTOP_AUTOSTART" "${PACKAGE_NAME}" "$FINAL_EXEC" "$FINAL_ICON" "yes"
+# Создаём только .desktop для меню
+write_desktop_file_menu "$DESKTOP_MAIN" "${PACKAGE_NAME}" "$FINAL_EXEC" "$FINAL_ICON"
 
 # ---------- Финал ----------
 rm -rf build_standalone
@@ -203,7 +196,7 @@ echo "🎉 Done!"
 echo "• Standalone: ${PACKAGE_NAME}-standalone/ + ${PACKAGE_NAME}-run"
 echo "• Onefile  : ${PACKAGE_NAME}-onefile (если собрался)"
 echo "• Menu     : ${DESKTOP_MAIN}"
-echo "• Autostart: ${DESKTOP_AUTOSTART}"
+echo "• Autostart: управляется из настроек приложения (чекбокс)"
 echo "• Icon     : $( [[ -n "$FINAL_ICON" ]] && echo "$FINAL_ICON" || echo 'нет' )"
 echo ""
 echo "📦 Pack for distribution:"

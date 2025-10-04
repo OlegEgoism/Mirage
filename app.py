@@ -1,6 +1,8 @@
 from __future__ import annotations
 import json
 import os
+import sys
+import stat
 import random
 import subprocess
 from dataclasses import dataclass, asdict, field
@@ -32,11 +34,17 @@ APP_ID = "mirage.tray"
 APP_VERSION = "1.1.0"
 APP_AUTHOR = "Oleg Pustovalov"
 APP_WEBSITE = "https://github.com/OlegEgoism/Mirage"
+
 CONFIG_DIR = Path.home() / ".config" / "mirage"
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_FILE = CONFIG_DIR / "settings.json"
+
 ICON_FILE = Path(__file__).parent / "logo_app.png"
 SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
+
+AUTOSTART_DIR = Path.home() / ".config" / "autostart"
+AUTOSTART_DIR.mkdir(parents=True, exist_ok=True)
+AUTOSTART_FILE = AUTOSTART_DIR / "Mirage.desktop"
 
 
 def _format_exts_for_label(exts: set[str]) -> str:
@@ -56,6 +64,61 @@ def _gtk_patterns_for_exts(exts: set[str]) -> List[str]:
     return pats
 
 
+def _current_exec_command() -> str:
+    """
+    Формирует команду Exec для .desktop:
+    - если запущено как скомпилированный бинарь, используем sys.argv[0]
+    - если как скрипт, используем интерпретатор + путь к app.py
+    """
+    argv0 = Path(sys.argv[0]).resolve()
+    if argv0.suffix.lower() == ".py":
+        python = Path(sys.executable).resolve()
+        script = Path(__file__).resolve()
+        return f'"{python}" "{script}"'
+    else:
+        return f'"{argv0}"'
+
+
+def _desktop_entry(name: str, comment: str, icon_path: Optional[Path]) -> str:
+    icon = str(icon_path.resolve()) if icon_path and icon_path.exists() else "image-x-generic"
+    exec_cmd = _current_exec_command()
+    return (
+        "[Desktop Entry]\n"
+        "Type=Application\n"
+        f"Version={APP_VERSION}\n"
+        f"Name={name}\n"
+        f"Comment={comment}\n"
+        f"Exec={exec_cmd}\n"
+        f"Icon={icon}\n"
+        "Terminal=false\n"
+        "Categories=Utility;\n"
+        "X-GNOME-Autostart-enabled=true\n"
+    )
+
+
+class AutostartManager:
+    @staticmethod
+    def is_enabled() -> bool:
+        return AUTOSTART_FILE.exists()
+
+    @staticmethod
+    def enable(app_name: str, comment: str) -> None:
+        try:
+            content = _desktop_entry(app_name, comment, ICON_FILE)
+            AUTOSTART_FILE.write_text(content, encoding="utf-8")
+            AUTOSTART_FILE.chmod(stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
+        except Exception as e:
+            print(f"[Mirage] Autostart enable error: {e}")
+
+    @staticmethod
+    def disable() -> None:
+        try:
+            if AUTOSTART_FILE.exists():
+                AUTOSTART_FILE.unlink()
+        except Exception as e:
+            print(f"[Mirage] Autostart disable error: {e}")
+
+
 @dataclass
 class Settings:
     folder: str = str(Path.home() / "Pictures")
@@ -65,6 +128,7 @@ class Settings:
     use_selected_only: bool = False
     selected: List[str] = field(default_factory=list)
     language: str = "ru"
+    autostart: bool = False
 
     @classmethod
     def load(cls) -> "Settings":
@@ -73,13 +137,20 @@ class Settings:
                 data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
                 base = asdict(cls())
                 base.update(data)
-                return cls(**base)
-            except Exception:
-                pass
-        return cls()
+                s = cls(**base)
+                s.autostart = AutostartManager.is_enabled()
+                return s
+            except Exception as e:
+                print(f"[Mirage] Settings load error: {e}")
+        s = cls()
+        s.autostart = AutostartManager.is_enabled()
+        return s
 
     def save(self) -> None:
-        CONFIG_FILE.write_text(json.dumps(asdict(self), ensure_ascii=False, indent=2), encoding="utf-8")
+        try:
+            CONFIG_FILE.write_text(json.dumps(asdict(self), ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception as e:
+            print(f"[Mirage] Settings save error: {e}")
 
 
 class WallpaperEngine:
@@ -126,7 +197,7 @@ class SettingsDialog(Gtk.Dialog):
     def __init__(self, parent: Optional[Gtk.Window], settings: Settings, on_save, T, current_wallpaper: Optional[str]):
         super().__init__(title=T["settings_title"], transient_for=parent, flags=0)
         self.set_modal(True)
-        self.set_default_size(320, 460)
+        self.set_default_size(340, 520)
         self.settings = settings
         self.on_save = on_save
         self.T = T
@@ -164,6 +235,10 @@ class SettingsDialog(Gtk.Dialog):
         self.chk_use_selected.set_active(self.settings.use_selected_only)
         self.chk_use_selected.set_halign(Gtk.Align.START)
 
+        self.chk_autostart = Gtk.CheckButton()
+        self.chk_autostart.set_active(AutostartManager.is_enabled())
+        self.chk_autostart.set_halign(Gtk.Align.START)
+
         self.lbl_selected_count = Gtk.Label()
         self.lbl_selected_count.set_halign(Gtk.Align.START)
 
@@ -191,25 +266,20 @@ class SettingsDialog(Gtk.Dialog):
         self.btn_box.pack_start(self.btn_about, False, False, 0)
         self.btn_box.set_halign(Gtk.Align.START)
 
-        self.grid.attach(self.lbl_folder, 0, 0, 1, 1)
-        self.grid.attach(self.btn_folder, 1, 0, 1, 1)
+        row = 0
+        self.grid.attach(self.chk_autostart, 0, row, 2, 1);  row += 1
+        self.grid.attach(self.lbl_folder, 0, row, 1, 1);     self.grid.attach(self.btn_folder, 1, row, 1, 1); row += 1
+        self.grid.attach(self.lbl_interval, 0, row, 1, 1);   self.grid.attach(self.spin_interval, 1, row, 1, 1); row += 1
+        self.grid.attach(self.chk_shuffle, 0, row, 2, 1);    row += 1
+        self.grid.attach(self.chk_recursive, 0, row, 2, 1);  row += 1
+        self.grid.attach(self.chk_use_selected, 0, row, 2, 1); row += 1
 
-        self.grid.attach(self.lbl_interval, 0, 1, 1, 1)
-        self.grid.attach(self.spin_interval, 1, 1, 1, 1)
-
-        self.grid.attach(self.chk_shuffle, 0, 2, 2, 1)
-        self.grid.attach(self.chk_recursive, 0, 3, 2, 1)
-        self.grid.attach(self.chk_use_selected, 0, 4, 2, 1)
-
-        self.grid.attach(self.btn_pick, 1, 5, 1, 1)
-        self.grid.attach(self.lbl_selected_count, 0, 6, 2, 1)
-
-        self.grid.attach(self.lbl_formats, 0, 7, 2, 1)
-
-        self.grid.attach(self.lbl_preview, 0, 8, 1, 1)
-        self.grid.attach(self.preview, 1, 8, 1, 1)
-
-        self.grid.attach(self.btn_box, 0, 9, 2, 1)
+        self.grid.attach(self.btn_pick, 1, row, 1, 1); row += 1
+        self.grid.attach(self.lbl_selected_count, 0, row, 2, 1); row += 1
+        self.grid.attach(self.lbl_formats, 0, row, 2, 1); row += 1
+        self.grid.attach(self.lbl_preview, 0, row, 1, 1)
+        self.grid.attach(self.preview, 1, row, 1, 1); row += 1
+        self.grid.attach(self.btn_box, 0, row, 2, 1)
 
         self._apply_language(T)
         self._update_selected_label()
@@ -226,6 +296,7 @@ class SettingsDialog(Gtk.Dialog):
         self.chk_shuffle.set_label(self.T["shuffle"])
         self.chk_recursive.set_label(self.T["recursive"])
         self.chk_use_selected.set_label(self.T["use_selected"])
+        self.chk_autostart.set_label(self.T.get("autostart", "Autostart"))
         self.btn_pick.set_label(self.T["pick_images"])
         self.lbl_preview.set_label(self.T["current_wallpaper"])
         self.btn_save.set_label(self.T["btn_save"])
@@ -298,7 +369,18 @@ class SettingsDialog(Gtk.Dialog):
         self.settings.shuffle = self.chk_shuffle.get_active()
         self.settings.recursive = self.chk_recursive.get_active()
         self.settings.use_selected_only = self.chk_use_selected.get_active()
+        want_autostart = self.chk_autostart.get_active()
+        self.settings.autostart = want_autostart
+        if want_autostart:
+            AutostartManager.enable(
+                app_name=self.T.get("app_name", "Mirage"),
+                comment=self.T.get("about_comments", "Automatic change of desktop wallpaper.")
+            )
+        else:
+            AutostartManager.disable()
+
         self.settings.save()
+
         if callable(self.on_save):
             self.on_save(self.settings)
         self.response(Gtk.ResponseType.OK)

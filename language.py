@@ -29,6 +29,7 @@ LANGUAGES = {
         "formats_label": "Форматы",
         "images_filter_title": "Изображения",
         "filter_all": "Все файлы",
+        "autostart": "Автозапуск",
 
         # About
         "about_comments": "Автоматическая смена обоев рабочего стола.",
@@ -68,13 +69,14 @@ LANGUAGES = {
         "formats_label": "Formats",
         "images_filter_title": "Images",
         "filter_all": "All files",
+        "autostart": "Autostart",
 
         # About
         "about_comments": "Automatic change of desktop wallpaper.",
         "about_website_label": "GitHub: Mirage",
         "about_license": (
             "License: MIT\n\n"
-            "Free use, copying, modification, and distribution are permitted"
+            "Free use, copying, modification, and distribution are permitted "
             "as long as the copyright notice is preserved."
         ),
     }
