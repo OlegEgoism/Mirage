@@ -1,9 +1,13 @@
 #!/bin/bash
+# Uninstall Mirage + очистка артефактов Nuitka
+# Usage:
+#   ./uninstall_mirage.sh [--dry-run] [--purge] [--all] [-y|--yes]
 
 set -euo pipefail
 
-PACKAGE_NAME="Mirage"
-ENTRY_BASENAME="app"
+PACKAGE_NAME="Mirage"   # имя продукта (ярлыки/папки)
+ENTRY_BASENAME="app"    # базовое имя входного файла (app.py -> app.*)
+
 DRY_RUN=false
 PURGE=false
 ALL=false
@@ -16,7 +20,7 @@ for arg in "$@"; do
     --all)     ALL=true ;;
     --yes|-y)  ASSUME_YES=true ;;
     -h|--help)
-      sed -n '1,40p' "$0"
+      echo "Options: --dry-run  --purge  --all  -y|--yes"
       exit 0
       ;;
     *)
@@ -26,49 +30,46 @@ for arg in "$@"; do
   esac
 done
 
-# --- помощники ---
 log() { echo -e "$@"; }
-ask_yn() {
-  $ASSUME_YES && return 0
-  read -r -p "$1 [y/N]: " ans
-  [[ "${ans,,}" == "y" || "${ans,,}" == "yes" ]]
-}
-
+ask_yn() { $ASSUME_YES && return 0; read -r -p "$1 [y/N]: " ans; [[ "${ans,,}" == y || "${ans,,}" == yes ]]; }
 safe_remove() {
-  local path="$1"
-  local desc="$2"
+  local path="$1" desc="$2"
   if [[ -e "$path" ]]; then
-    if $DRY_RUN; then
-      log "🔍 DRY-RUN: будет удалён $desc: $path"
-    else
-      rm -rf --one-file-system "$path"
-      log "✅ Удалён $desc: $path"
+    if $DRY_RUN; then log "🔍 DRY-RUN: будет удалён $desc: $path"
+    else rm -rf --one-file-system "$path"; log "✅ Удалён $desc: $path"
     fi
-  else
-    log "ℹ️  Не найден $desc: $path"
+  else log "ℹ️  Не найден $desc: $path"
   fi
 }
 
-# --- пути как в build_nuitka.sh ---
 APP_MENU_DIR="$HOME/.local/share/applications"
 AUTOSTART_DIR="$HOME/.config/autostart"
+CONFIG_DIR="$HOME/.config/mirage"
+
 STANDALONE_DIR="$PWD/${PACKAGE_NAME}-standalone"
 RUNNER_FILE="$PWD/${PACKAGE_NAME}-run"
 ONEFILE_BIN="$PWD/${PACKAGE_NAME}-onefile"
 
 DESKTOP_MAIN="${APP_MENU_DIR}/${PACKAGE_NAME}.desktop"
-# Возможные устаревшие ярлыки (на случай старых сборок)
 LEGACY_ONE_AUTOSTART="${AUTOSTART_DIR}/${PACKAGE_NAME}-onefile.desktop"
 LEGACY_AUTOSTART="${AUTOSTART_DIR}/${PACKAGE_NAME}.desktop"
+DEFAULT_AUTOSTART="${AUTOSTART_DIR}/${PACKAGE_NAME}.desktop"
 
-# Конфиг и кэш
-CONFIG_DIR="$HOME/.config/mirage"
+BUILD_DIRS=(
+  "$PWD/build_standalone"
+  "$PWD/${PACKAGE_NAME}.build"
+  "$PWD/${PACKAGE_NAME}.dist"
+  "$PWD/${PACKAGE_NAME}.onefile-build"
+  "$PWD/${ENTRY_BASENAME}.build"
+  "$PWD/${ENTRY_BASENAME}.dist"
+  "$PWD/${ENTRY_BASENAME}.onefile-build"
+)
 
-# Папки сборки (если запускали build_nuitka.sh в этом каталоге)
-BUILD_DIR_STANDALONE="$PWD/build_standalone"
-BUILD_DIR1="$PWD/${PACKAGE_NAME}.build"
-BUILD_DIR2="$PWD/${PACKAGE_NAME}.dist"
-BUILD_DIR3="$PWD/${PACKAGE_NAME}.onefile-build"
+shopt -s nullglob
+for d in "$PWD"/*.build "$PWD"/*.dist "$PWD"/*.onefile-build; do
+  BUILD_DIRS+=("$d")
+done
+shopt -u nullglob
 
 echo "🗑️  Подготовка к удалению ${PACKAGE_NAME}…"
 echo "    DRY_RUN = $DRY_RUN"
@@ -76,8 +77,7 @@ echo "    PURGE   = $PURGE"
 echo "    ALL     = $ALL"
 
 if ! ask_yn "Продолжить удаление ${PACKAGE_NAME}?"; then
-  echo "Отменено."
-  exit 0
+  echo "Отменено."; exit 0
 fi
 
 echo ""
@@ -88,16 +88,18 @@ safe_remove "$ONEFILE_BIN"     "onefile-бинарник"
 
 echo ""
 echo "🧹 Удаление ярлыков .desktop…"
-safe_remove "$DESKTOP_MAIN"        "ярлык меню"
-# Удаляем автозапуски, если остались от старых версий/ручных включений
+safe_remove "$DESKTOP_MAIN"         "ярлык меню"
 safe_remove "$LEGACY_ONE_AUTOSTART" "автозапуск (legacy onefile)"
 safe_remove "$LEGACY_AUTOSTART"     "автозапуск (legacy)"
-
-# На случай, если приложение само создавало автозапуск стандартным именем
-DEFAULT_AUTOSTART="${AUTOSTART_DIR}/${PACKAGE_NAME}.desktop"
 if [[ "$DEFAULT_AUTOSTART" != "$LEGACY_AUTOSTART" ]]; then
   safe_remove "$DEFAULT_AUTOSTART" "автозапуск (по умолчанию)"
 fi
+
+echo ""
+echo "🧼 Очистка артефактов сборки Nuitka…"
+for d in "${BUILD_DIRS[@]}"; do
+  safe_remove "$d" "артефакт сборки"
+done
 
 echo ""
 if $PURGE; then
@@ -105,15 +107,6 @@ if $PURGE; then
   safe_remove "$CONFIG_DIR" "каталог настроек"
 else
   echo "⚠️  Настройки в ${CONFIG_DIR} оставлены (используйте --purge для удаления)."
-fi
-
-if $ALL; then
-  echo ""
-  echo "🧼 Очистка временных папок сборки (--all)…"
-  safe_remove "$BUILD_DIR_STANDALONE" "build_standalone"
-  safe_remove "$BUILD_DIR1"           "${PACKAGE_NAME}.build"
-  safe_remove "$BUILD_DIR2"           "${PACKAGE_NAME}.dist"
-  safe_remove "$BUILD_DIR3"           "${PACKAGE_NAME}.onefile-build"
 fi
 
 echo ""

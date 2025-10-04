@@ -63,8 +63,7 @@ python3 app.py
 ```
 
 <h2 style="color: chocolate">
-    Building app
-    <span style="color: red">(recommended)</span>
+    Building app <span style="color: red">(recommended)</span>
 </h2>
 <h3>💡 Launch file "build.sh" (assembly time up to 5 minutes)</h3>
 
@@ -80,13 +79,13 @@ ls -l *Mirage-onefile
 ```
 
 <h2 style="color: chocolate">
-  Remove
-  <span style="color: red">(recommended)</span>
+  Remove <span style="color: red">(recommended)</span>
 </h2>
 
 ```bash
 chmod +x uninstall_mirage.sh
-./uninstall_mirage.sh [--purge] [--all] [--yes] [--dry-run]
+./uninstall_mirage.sh --all --purge -y
+./uninstall_mirage.sh --all --dry-run
 ```
 
 
