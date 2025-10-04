@@ -32,7 +32,7 @@ Made By ❤ [OlegEgoism](https://github.com/OlegEgoism)
 - Use only selected images
 - Language
 
-<img src="info.png" width="90%" />
+<img src="info.png" width="70%" />
 
 <h3>Available Interface Languages</h3>
 
