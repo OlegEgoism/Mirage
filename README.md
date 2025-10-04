@@ -32,6 +32,8 @@ Made By ❤ [OlegEgoism](https://github.com/OlegEgoism)
 - Use only selected images
 - Language
 
+<img src="info.png" width="90%" />
+
 <h3>Available Interface Languages</h3>
 
 - 🇷🇺 Russian.
