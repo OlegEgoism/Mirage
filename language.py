@@ -1,9 +1,6 @@
-SUPPORTED_LANGS = ['ru', 'en']
-
 LANGUAGES = {
-    'ru': {
+    "ru": {
         "language_name": "Русский",
-
         # Меню/общие
         "app_name": "Mirage",
         "pause": "Пауза",
@@ -12,7 +9,6 @@ LANGUAGES = {
         "settings": "Настройки…",
         "quit": "Выход",
         "menu_language": "Язык",
-
         # Настройки
         "settings_title": "Настройки",
         "folder_label": "Папка с изображениями:",
@@ -25,25 +21,14 @@ LANGUAGES = {
         "current_wallpaper": "Текущие обои",
         "btn_save": "Сохранить",
         "btn_cancel": "Отмена",
-        "app_info": "О программе",
         "formats_label": "Форматы",
         "images_filter_title": "Изображения",
         "filter_all": "Все файлы",
         "autostart": "Автозапуск",
-
-        # About
-        "about_comments": "Автоматическая смена обоев рабочего стола.",
-        "about_website_label": "GitHub: Mirage",
-        "about_license": (
-            "Лицензия: MIT\n\n"
-            "Разрешается свободное использование, копирование, изменение и распространение "
-            "при условии сохранения уведомления об авторских правах."
-        ),
+        "website_label": "GitHub: Mirage",
     },
-
-    'en': {
+    "en": {
         "language_name": "English",
-
         # Menu/common
         "app_name": "Mirage",
         "pause": "Pause",
@@ -52,7 +37,6 @@ LANGUAGES = {
         "settings": "Settings…",
         "quit": "Quit",
         "menu_language": "Language",
-
         # Settings
         "settings_title": "Settings",
         "folder_label": "Images folder:",
@@ -65,19 +49,10 @@ LANGUAGES = {
         "current_wallpaper": "Current wallpaper",
         "btn_save": "Save",
         "btn_cancel": "Cancel",
-        "app_info": "About app",
         "formats_label": "Formats",
         "images_filter_title": "Images",
         "filter_all": "All files",
         "autostart": "Autostart",
-
-        # About
-        "about_comments": "Automatic change of desktop wallpaper.",
-        "about_website_label": "GitHub: Mirage",
-        "about_license": (
-            "License: MIT\n\n"
-            "Free use, copying, modification, and distribution are permitted "
-            "as long as the copyright notice is preserved."
-        ),
-    }
+        "website_label": "GitHub: Mirage",
+    },
 }

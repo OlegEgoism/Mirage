@@ -1,6 +1,5 @@
 from __future__ import annotations
 import json
-import os
 import sys
 import stat
 import random
@@ -10,6 +9,8 @@ from pathlib import Path
 from typing import List, Optional
 
 import gi
+
+from language import LANGUAGES  # оставляем внешний словарь локализаций
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib, GdkPixbuf
@@ -28,8 +29,6 @@ except (ValueError, ImportError):
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio
 
-from language import LANGUAGES, SUPPORTED_LANGS
-
 APP_ID = "mirage.tray"
 APP_VERSION = "1.1.0"
 APP_AUTHOR = "Oleg Pustovalov"
@@ -46,14 +45,14 @@ AUTOSTART_DIR = Path.home() / ".config" / "autostart"
 AUTOSTART_DIR.mkdir(parents=True, exist_ok=True)
 AUTOSTART_FILE = AUTOSTART_DIR / "Mirage.desktop"
 
+SUPPORTED_LANGS = ["ru", "en"]
+
 
 def _format_exts_for_label(exts: set[str]) -> str:
-    """'.jpg' -> 'JPG', join with ', '"""
     return ", ".join(sorted({e.lstrip(".").upper() for e in exts}))
 
 
 def _gtk_patterns_for_exts(exts: set[str]) -> List[str]:
-    """Сформировать паттерны для Gtk.FileFilter (оба регистра)."""
     pats: List[str] = []
     for e in exts:
         low = e.lower()
@@ -65,11 +64,6 @@ def _gtk_patterns_for_exts(exts: set[str]) -> List[str]:
 
 
 def _current_exec_command() -> str:
-    """
-    Формирует команду Exec для .desktop:
-    - если запущено как скомпилированный бинарь, используем sys.argv[0]
-    - если как скрипт, используем интерпретатор + путь к app.py
-    """
     argv0 = Path(sys.argv[0]).resolve()
     if argv0.suffix.lower() == ".py":
         python = Path(sys.executable).resolve()
@@ -170,7 +164,7 @@ class WallpaperEngine:
             try:
                 subprocess.run(
                     ["gsettings", "set", "org.gnome.desktop.background", "picture-uri", uri],
-                    check=True
+                    check=True,
                 )
             except Exception as e:
                 print(f"[Mirage] Wallpaper error: {e}")
@@ -194,10 +188,17 @@ def list_images(folder: Path, recursive: bool) -> List[Path]:
 
 
 class SettingsDialog(Gtk.Dialog):
-    def __init__(self, parent: Optional[Gtk.Window], settings: Settings, on_save, T, current_wallpaper: Optional[str]):
+    def __init__(
+        self,
+        parent: Optional[Gtk.Window],
+        settings: Settings,
+        on_save,
+        T,
+        current_wallpaper: Optional[str],
+    ):
         super().__init__(title=T["settings_title"], transient_for=parent, flags=0)
         self.set_modal(True)
-        self.set_default_size(340, 520)
+        self.set_default_size(360, 540)
         self.settings = settings
         self.on_save = on_save
         self.T = T
@@ -205,6 +206,13 @@ class SettingsDialog(Gtk.Dialog):
         content = self.get_content_area()
         self.grid = Gtk.Grid(column_spacing=10, row_spacing=10, margin=12)
         content.add(self.grid)
+
+        # Ссылка на сайт (правый верх)
+        self.link_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.link_box.set_hexpand(True)
+        self.link_box.set_halign(Gtk.Align.END)
+        self.link_button = Gtk.LinkButton(uri=APP_WEBSITE, label=self.T.get("website_label", "GitHub: Mirage"))
+        self.link_box.pack_end(self.link_button, False, False, 0)
 
         self.lbl_folder = Gtk.Label()
         self.lbl_folder.set_halign(Gtk.Align.START)
@@ -257,28 +265,24 @@ class SettingsDialog(Gtk.Dialog):
         self.btn_box = Gtk.Box(spacing=6)
         self.btn_save = Gtk.Button()
         self.btn_cancel = Gtk.Button()
-        self.btn_about = Gtk.Button()
         self.btn_save.connect("clicked", self._on_save)
         self.btn_cancel.connect("clicked", lambda *_: self.response(Gtk.ResponseType.CANCEL))
-        self.btn_about.connect("clicked", self._show_about)
         self.btn_box.pack_start(self.btn_save, False, False, 0)
         self.btn_box.pack_start(self.btn_cancel, False, False, 0)
-        self.btn_box.pack_start(self.btn_about, False, False, 0)
         self.btn_box.set_halign(Gtk.Align.START)
 
         row = 0
-        self.grid.attach(self.chk_autostart, 0, row, 2, 1);  row += 1
-        self.grid.attach(self.lbl_folder, 0, row, 1, 1);     self.grid.attach(self.btn_folder, 1, row, 1, 1); row += 1
-        self.grid.attach(self.lbl_interval, 0, row, 1, 1);   self.grid.attach(self.spin_interval, 1, row, 1, 1); row += 1
-        self.grid.attach(self.chk_shuffle, 0, row, 2, 1);    row += 1
-        self.grid.attach(self.chk_recursive, 0, row, 2, 1);  row += 1
+        self.grid.attach(self.link_box, 0, row, 2, 1); row += 1
+        self.grid.attach(self.chk_autostart, 0, row, 2, 1); row += 1
+        self.grid.attach(self.lbl_folder, 0, row, 1, 1); self.grid.attach(self.btn_folder, 1, row, 1, 1); row += 1
+        self.grid.attach(self.lbl_interval, 0, row, 1, 1); self.grid.attach(self.spin_interval, 1, row, 1, 1); row += 1
+        self.grid.attach(self.chk_shuffle, 0, row, 2, 1); row += 1
+        self.grid.attach(self.chk_recursive, 0, row, 2, 1); row += 1
         self.grid.attach(self.chk_use_selected, 0, row, 2, 1); row += 1
-
         self.grid.attach(self.btn_pick, 1, row, 1, 1); row += 1
         self.grid.attach(self.lbl_selected_count, 0, row, 2, 1); row += 1
         self.grid.attach(self.lbl_formats, 0, row, 2, 1); row += 1
-        self.grid.attach(self.lbl_preview, 0, row, 1, 1)
-        self.grid.attach(self.preview, 1, row, 1, 1); row += 1
+        self.grid.attach(self.lbl_preview, 0, row, 1, 1); self.grid.attach(self.preview, 1, row, 1, 1); row += 1
         self.grid.attach(self.btn_box, 0, row, 2, 1)
 
         self._apply_language(T)
@@ -290,6 +294,7 @@ class SettingsDialog(Gtk.Dialog):
     def _apply_language(self, T):
         self.T = T
         self.set_title(self.T["settings_title"])
+        self.link_button.set_label(self.T.get("website_label", "GitHub: Mirage"))
         self.lbl_folder.set_label(self.T["folder_label"])
         self.btn_folder.set_title(self.T["folder_label"])
         self.lbl_interval.set_label(self.T["interval_label"])
@@ -301,7 +306,6 @@ class SettingsDialog(Gtk.Dialog):
         self.lbl_preview.set_label(self.T["current_wallpaper"])
         self.btn_save.set_label(self.T["btn_save"])
         self.btn_cancel.set_label(self.T["btn_cancel"])
-        self.btn_about.set_label(self.T["app_info"])
         self._update_formats_label()
 
     def _update_selected_label(self):
@@ -330,10 +334,7 @@ class SettingsDialog(Gtk.Dialog):
             parent=self,
             action=Gtk.FileChooserAction.OPEN,
         )
-        dialog.add_buttons(
-            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-            Gtk.STOCK_OPEN, Gtk.ResponseType.OK
-        )
+        dialog.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OPEN, Gtk.ResponseType.OK)
         dialog.set_select_multiple(True)
         try:
             dialog.set_current_folder(self.btn_folder.get_filename() or self.settings.folder)
@@ -374,7 +375,7 @@ class SettingsDialog(Gtk.Dialog):
         if want_autostart:
             AutostartManager.enable(
                 app_name=self.T.get("app_name", "Mirage"),
-                comment=self.T.get("about_comments", "Automatic change of desktop wallpaper.")
+                comment="Automatic change of desktop wallpaper.",
             )
         else:
             AutostartManager.disable()
@@ -384,40 +385,6 @@ class SettingsDialog(Gtk.Dialog):
         if callable(self.on_save):
             self.on_save(self.settings)
         self.response(Gtk.ResponseType.OK)
-
-    def _show_about(self, *_):
-        lang_code = "en" if self.T.get("language_name") == "English" else "ru"
-        locale_map = {
-            "en": "en_US.UTF-8",
-            "ru": "ru_RU.UTF-8",
-        }
-        target = locale_map.get(lang_code, "en_US.UTF-8")
-
-        prev = {k: os.environ.get(k) for k in ("LANGUAGE", "LC_ALL", "LANG")}
-        try:
-            GLib.setenv("LANGUAGE", target, True)
-            GLib.setenv("LC_ALL", target, True)
-            GLib.setenv("LANG", target, True)
-
-            about = Gtk.AboutDialog(transient_for=self, modal=True)
-            about.set_program_name(self.T.get("app_name", "Mirage"))
-            about.set_version(APP_VERSION)
-            about.set_comments(self.T["about_comments"])
-            about.set_website(APP_WEBSITE)
-            about.set_website_label(self.T["about_website_label"])
-            about.set_authors([APP_AUTHOR])
-            about.set_license(self.T["about_license"])
-            about.set_wrap_license(True)
-            if ICON_FILE.exists():
-                about.set_logo(GdkPixbuf.Pixbuf.new_from_file_at_scale(str(ICON_FILE), 64, 64, True))
-            about.run()
-            about.destroy()
-        finally:
-            for k, v in prev.items():
-                if v is None:
-                    GLib.unsetenv(k)
-                else:
-                    GLib.setenv(k, v, True)
 
 
 class MirageApp:
@@ -431,6 +398,7 @@ class MirageApp:
         self.paused = False
         self.current_wallpaper: Optional[str] = None
         self.settings_dialog: Optional[SettingsDialog] = None
+        self.lang_radio_items: dict[str, Gtk.RadioMenuItem] = {}  # для отметки активного языка
         self._refresh_lang()
 
         self.icon_name = str(ICON_FILE) if ICON_FILE.exists() else "image-x-generic"
@@ -454,6 +422,11 @@ class MirageApp:
     def _refresh_lang(self):
         self.T = LANGUAGES.get(self.settings.language, LANGUAGES["ru"])
 
+    def _on_lang_toggled(self, menu_item: Gtk.RadioMenuItem, lang: str):
+        # Чтобы не ловить событие при снятии галки со старого пункта:
+        if menu_item.get_active() and lang != self.settings.language:
+            self._set_language(lang)
+
     def _build_menu(self) -> Gtk.Menu:
         menu = Gtk.Menu()
 
@@ -467,12 +440,22 @@ class MirageApp:
 
         menu.append(Gtk.SeparatorMenuItem())
 
+        # Подменю языков с RadioMenuItem (показываем точку у активного)
         lang_item = Gtk.MenuItem(label=self.T["menu_language"])
         lang_menu = Gtk.Menu()
+        group = None
+        self.lang_radio_items.clear()
         for lang in SUPPORTED_LANGS:
-            sub = Gtk.MenuItem(label=LANGUAGES[lang]["language_name"])
-            sub.connect("activate", lambda _, l=lang: self._set_language(l))
-            lang_menu.append(sub)
+            label = LANGUAGES[lang]["language_name"]
+            if group is None:
+                radio = Gtk.RadioMenuItem.new_with_label(None, label)
+                group = radio.get_group()
+            else:
+                radio = Gtk.RadioMenuItem.new_with_label(group, label)
+            radio.set_active(lang == self.settings.language)
+            radio.connect("toggled", self._on_lang_toggled, lang)
+            self.lang_radio_items[lang] = radio
+            lang_menu.append(radio)
         lang_item.set_submenu(lang_menu)
         menu.append(lang_item)
 
@@ -495,6 +478,7 @@ class MirageApp:
         self.settings.language = lang
         self.settings.save()
         self._refresh_lang()
+        # Перестроим меню, чтобы тексты обновились (радио-точка тоже сохранится)
         self.menu = self._build_menu()
         if AppInd:
             self.ind.set_menu(self.menu)
@@ -563,7 +547,7 @@ class MirageApp:
             self.settings,
             on_save=self._on_settings_saved,
             T=self.T,
-            current_wallpaper=self.current_wallpaper
+            current_wallpaper=self.current_wallpaper,
         )
 
         def _on_destroy(_dlg):
