@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import json
 import sys
 import stat
@@ -6,11 +7,11 @@ import random
 import subprocess
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Callable
 
 import gi
 
-from language import LANGUAGES  # оставляем внешний словарь локализаций
+from language import LANGUAGES
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib, GdkPixbuf
@@ -53,28 +54,26 @@ def _format_exts_for_label(exts: set[str]) -> str:
 
 
 def _gtk_patterns_for_exts(exts: set[str]) -> List[str]:
-    pats: List[str] = []
-    for e in exts:
-        low = e.lower()
-        up = e.upper()
-        pats.append(f"*{low}")
-        if up != low:
-            pats.append(f"*{up}")
-    return pats
+    patterns = []
+    for ext in exts:
+        lower = ext.lower()
+        upper = ext.upper()
+        patterns.append(f"*{lower}")
+        if upper != lower:
+            patterns.append(f"*{upper}")
+    return patterns
 
 
 def _current_exec_command() -> str:
-    argv0 = Path(sys.argv[0]).resolve()
-    if argv0.suffix.lower() == ".py":
+    script_path = Path(__file__).resolve()
+    if script_path.suffix.lower() == ".py":
         python = Path(sys.executable).resolve()
-        script = Path(__file__).resolve()
-        return f'"{python}" "{script}"'
-    else:
-        return f'"{argv0}"'
+        return f'"{python}" "{script_path}"'
+    return f'"{script_path}"'
 
 
 def _desktop_entry(name: str, comment: str, icon_path: Optional[Path]) -> str:
-    icon = str(icon_path.resolve()) if icon_path and icon_path.exists() else "image-x-generic"
+    icon = str(icon_path.resolve()) if icon_path and icon_path.is_file() else "image-x-generic"
     exec_cmd = _current_exec_command()
     return (
         "[Desktop Entry]\n"
@@ -93,7 +92,7 @@ def _desktop_entry(name: str, comment: str, icon_path: Optional[Path]) -> str:
 class AutostartManager:
     @staticmethod
     def is_enabled() -> bool:
-        return AUTOSTART_FILE.exists()
+        return AUTOSTART_FILE.is_file()
 
     @staticmethod
     def enable(app_name: str, comment: str) -> None:
@@ -102,15 +101,15 @@ class AutostartManager:
             AUTOSTART_FILE.write_text(content, encoding="utf-8")
             AUTOSTART_FILE.chmod(stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
         except Exception as e:
-            print(f"[Mirage] Autostart enable error: {e}")
+            print(f"[Mirage] Autostart enable error: {e}", file=sys.stderr)
 
     @staticmethod
     def disable() -> None:
         try:
-            if AUTOSTART_FILE.exists():
+            if AUTOSTART_FILE.is_file():
                 AUTOSTART_FILE.unlink()
         except Exception as e:
-            print(f"[Mirage] Autostart disable error: {e}")
+            print(f"[Mirage] Autostart disable error: {e}", file=sys.stderr)
 
 
 @dataclass
@@ -126,7 +125,7 @@ class Settings:
 
     @classmethod
     def load(cls) -> "Settings":
-        if CONFIG_FILE.exists():
+        if CONFIG_FILE.is_file():
             try:
                 data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
                 base = asdict(cls())
@@ -135,7 +134,7 @@ class Settings:
                 s.autostart = AutostartManager.is_enabled()
                 return s
             except Exception as e:
-                print(f"[Mirage] Settings load error: {e}")
+                print(f"[Mirage] Settings load error: {e}", file=sys.stderr)
         s = cls()
         s.autostart = AutostartManager.is_enabled()
         return s
@@ -144,7 +143,7 @@ class Settings:
         try:
             CONFIG_FILE.write_text(json.dumps(asdict(self), ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception as e:
-            print(f"[Mirage] Settings save error: {e}")
+            print(f"[Mirage] Settings save error: {e}", file=sys.stderr)
 
 
 class WallpaperEngine:
@@ -155,36 +154,38 @@ class WallpaperEngine:
         uri = f"file://{path}"
         try:
             self._settings.set_string("picture-uri", uri)
-            try:
-                self._settings.set_string("picture-uri-dark", uri)
-            except Exception:
-                pass
+            self._settings.set_string("picture-uri-dark", uri)
             self._settings.apply()
         except Exception:
             try:
                 subprocess.run(
                     ["gsettings", "set", "org.gnome.desktop.background", "picture-uri", uri],
                     check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                subprocess.run(
+                    ["gsettings", "set", "org.gnome.desktop.background", "picture-uri-dark", uri],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
                 )
             except Exception as e:
-                print(f"[Mirage] Wallpaper error: {e}")
+                print(f"[Mirage] Wallpaper error: {e}", file=sys.stderr)
 
 
 def list_images(folder: Path, recursive: bool) -> List[Path]:
-    if not folder.exists() or not folder.is_dir():
+    if not folder.is_dir():
         return []
-    exts = SUPPORTED_EXTS
+    exts = {e.lower() for e in SUPPORTED_EXTS}
     images: List[Path] = []
-    if recursive:
-        for p in folder.rglob("*"):
-            if p.is_file() and p.suffix.lower() in exts:
-                images.append(p)
-    else:
-        for p in folder.iterdir():
-            if p.is_file() and p.suffix.lower() in exts:
-                images.append(p)
-    images.sort()
-    return images
+
+    iterator = folder.rglob("*") if recursive else folder.iterdir()
+    for p in iterator:
+        if p.is_file() and p.suffix.lower() in exts:
+            images.append(p)
+
+    return sorted(images)
 
 
 class SettingsDialog(Gtk.Dialog):
@@ -192,84 +193,71 @@ class SettingsDialog(Gtk.Dialog):
         self,
         parent: Optional[Gtk.Window],
         settings: Settings,
-        on_save,
-        T,
+        on_save: Callable[["Settings"], None],
+        T: dict,
         current_wallpaper: Optional[str],
+        on_next: Optional[Callable[[], None]],
     ):
         super().__init__(title=T["settings_title"], transient_for=parent, flags=0)
         self.set_modal(True)
         self.set_default_size(360, 540)
         self.settings = settings
         self.on_save = on_save
+        self.on_next = on_next
         self.T = T
 
         content = self.get_content_area()
         self.grid = Gtk.Grid(column_spacing=10, row_spacing=10, margin=12)
         content.add(self.grid)
 
-        # Ссылка на сайт (правый верх)
         self.link_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.link_box.set_hexpand(True)
         self.link_box.set_halign(Gtk.Align.END)
         self.link_button = Gtk.LinkButton(uri=APP_WEBSITE, label=self.T.get("website_label", "GitHub: Mirage"))
         self.link_box.pack_end(self.link_button, False, False, 0)
 
-        self.lbl_folder = Gtk.Label()
-        self.lbl_folder.set_halign(Gtk.Align.START)
+        self.lbl_folder = Gtk.Label(label=self.T["folder_label"], halign=Gtk.Align.START)
         self.btn_folder = Gtk.FileChooserButton(action=Gtk.FileChooserAction.SELECT_FOLDER)
-        self.btn_folder.set_hexpand(True)
-        try:
-            self.btn_folder.set_filename(self.settings.folder)
-        except Exception:
-            pass
+        self.btn_folder.set_filename(self.settings.folder)
 
-        self.lbl_interval = Gtk.Label()
-        self.lbl_interval.set_halign(Gtk.Align.START)
         adj = Gtk.Adjustment(
-            value=self.settings.interval_minutes, lower=1, upper=1440, step_increment=1, page_increment=10
+            value=self.settings.interval_minutes,
+            lower=1,
+            upper=1440,
+            step_increment=1,
+            page_increment=10,
         )
         self.spin_interval = Gtk.SpinButton(adjustment=adj, climb_rate=1, digits=0)
-        self.spin_interval.set_numeric(True)
+        self.lbl_interval = Gtk.Label(label=self.T["interval_label"], halign=Gtk.Align.START)
 
-        self.chk_shuffle = Gtk.CheckButton()
-        self.chk_shuffle.set_active(self.settings.shuffle)
-        self.chk_shuffle.set_halign(Gtk.Align.START)
+        self.chk_shuffle = Gtk.CheckButton(label=self.T["shuffle"], active=self.settings.shuffle)
+        self.chk_recursive = Gtk.CheckButton(label=self.T["recursive"], active=self.settings.recursive)
+        self.chk_use_selected = Gtk.CheckButton(label=self.T["use_selected"], active=self.settings.use_selected_only)
+        self.chk_autostart = Gtk.CheckButton(label=self.T.get("autostart", "Autostart"), active=AutostartManager.is_enabled())
 
-        self.chk_recursive = Gtk.CheckButton()
-        self.chk_recursive.set_active(self.settings.recursive)
-        self.chk_recursive.set_halign(Gtk.Align.START)
-
-        self.chk_use_selected = Gtk.CheckButton()
-        self.chk_use_selected.set_active(self.settings.use_selected_only)
-        self.chk_use_selected.set_halign(Gtk.Align.START)
-
-        self.chk_autostart = Gtk.CheckButton()
-        self.chk_autostart.set_active(AutostartManager.is_enabled())
-        self.chk_autostart.set_halign(Gtk.Align.START)
-
-        self.lbl_selected_count = Gtk.Label()
-        self.lbl_selected_count.set_halign(Gtk.Align.START)
-
-        self.btn_pick = Gtk.Button()
+        self.lbl_selected_count = Gtk.Label(halign=Gtk.Align.START)
+        self.btn_pick = Gtk.Button(label=self.T["pick_images"])
         self.btn_pick.connect("clicked", self._pick_images)
 
-        self.lbl_formats = Gtk.Label()
-        self.lbl_formats.set_halign(Gtk.Align.START)
+        self.lbl_formats = Gtk.Label(halign=Gtk.Align.START)
         self.lbl_formats.get_style_context().add_class("dim-label")
 
-        self.lbl_preview = Gtk.Label()
-        self.lbl_preview.set_halign(Gtk.Align.START)
+        self.lbl_preview = Gtk.Label(label=self.T["current_wallpaper"], halign=Gtk.Align.START)
         self.preview = Gtk.Image()
         self.preview.set_size_request(220, 130)
 
-        self.btn_box = Gtk.Box(spacing=6)
-        self.btn_save = Gtk.Button()
-        self.btn_cancel = Gtk.Button()
+        self.btn_next = Gtk.Button(label=self.T["next"])
+        self.btn_next.connect("clicked", lambda *_: self.on_next() if self.on_next else None)
+
+        self.btn_save = Gtk.Button(label=self.T["btn_save"])
+        self.btn_cancel = Gtk.Button(label=self.T["btn_cancel"])
         self.btn_save.connect("clicked", self._on_save)
         self.btn_cancel.connect("clicked", lambda *_: self.response(Gtk.ResponseType.CANCEL))
+
+        self.btn_box = Gtk.Box(spacing=6, halign=Gtk.Align.START)
+        self.btn_box.pack_start(self.btn_next, False, False, 0)
         self.btn_box.pack_start(self.btn_save, False, False, 0)
         self.btn_box.pack_start(self.btn_cancel, False, False, 0)
-        self.btn_box.set_halign(Gtk.Align.START)
 
         row = 0
         self.grid.attach(self.link_box, 0, row, 2, 1); row += 1
@@ -285,13 +273,12 @@ class SettingsDialog(Gtk.Dialog):
         self.grid.attach(self.lbl_preview, 0, row, 1, 1); self.grid.attach(self.preview, 1, row, 1, 1); row += 1
         self.grid.attach(self.btn_box, 0, row, 2, 1)
 
-        self._apply_language(T)
         self._update_selected_label()
         self._update_formats_label()
         self._update_preview(current_wallpaper)
         self.show_all()
 
-    def _apply_language(self, T):
+    def _apply_language(self, T: dict) -> None:
         self.T = T
         self.set_title(self.T["settings_title"])
         self.link_button.set_label(self.T.get("website_label", "GitHub: Mirage"))
@@ -304,20 +291,22 @@ class SettingsDialog(Gtk.Dialog):
         self.chk_autostart.set_label(self.T.get("autostart", "Autostart"))
         self.btn_pick.set_label(self.T["pick_images"])
         self.lbl_preview.set_label(self.T["current_wallpaper"])
+        self.btn_next.set_label(self.T["next"])
         self.btn_save.set_label(self.T["btn_save"])
         self.btn_cancel.set_label(self.T["btn_cancel"])
         self._update_formats_label()
 
-    def _update_selected_label(self):
-        self.lbl_selected_count.set_text(self.T["selected_count"].format(count=len(self.settings.selected)))
+    def _update_selected_label(self) -> None:
+        count = len(self.settings.selected)
+        self.lbl_selected_count.set_text(self.T["selected_count"].format(count=count))
 
-    def _update_formats_label(self):
-        title = self.T.get("formats_label", "Форматы")
+    def _update_formats_label(self) -> None:
+        title = self.T.get("formats_label", "Formats")
         exts_str = _format_exts_for_label(SUPPORTED_EXTS)
         self.lbl_formats.set_text(f"{title}: {exts_str}")
 
-    def _update_preview(self, path: Optional[str]):
-        if path and Path(path).exists():
+    def _update_preview(self, path: Optional[str]) -> None:
+        if path and Path(path).is_file():
             try:
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
                     path, width=220, height=130, preserve_aspect_ratio=True
@@ -336,42 +325,36 @@ class SettingsDialog(Gtk.Dialog):
         )
         dialog.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OPEN, Gtk.ResponseType.OK)
         dialog.set_select_multiple(True)
-        try:
-            dialog.set_current_folder(self.btn_folder.get_filename() or self.settings.folder)
-        except Exception:
-            pass
+        dialog.set_current_folder(self.settings.folder)
 
         exts_str = _format_exts_for_label(SUPPORTED_EXTS)
-        filter_title_base = self.T.get("images_filter_title", "Изображения")
         flt = Gtk.FileFilter()
-        flt.set_name(f"{filter_title_base} ({exts_str})")
+        flt.set_name(f"{self.T.get('images_filter_title', 'Images')} ({exts_str})")
         for patt in _gtk_patterns_for_exts(SUPPORTED_EXTS):
             flt.add_pattern(patt)
         dialog.add_filter(flt)
 
         flt_all = Gtk.FileFilter()
-        flt_all.set_name(self.T.get("filter_all", "Все файлы"))
+        flt_all.set_name(self.T.get("filter_all", "All files"))
         flt_all.add_pattern("*")
         dialog.add_filter(flt_all)
 
-        resp = dialog.run()
-        if resp == Gtk.ResponseType.OK:
-            files = dialog.get_filenames() or []
-            valid = [f for f in files if Path(f).suffix.lower() in SUPPORTED_EXTS]
-            self.settings.selected = valid
-            if valid:
-                self._update_preview(valid[0])
+        if dialog.run() == Gtk.ResponseType.OK:
+            files = [f for f in dialog.get_filenames() if Path(f).suffix.lower() in SUPPORTED_EXTS]
+            self.settings.selected = files
             self._update_selected_label()
+            if files:
+                self._update_preview(files[0])
         dialog.destroy()
 
     def _on_save(self, *_):
         self.settings.folder = self.btn_folder.get_filename() or self.settings.folder
-        self.settings.interval_minutes = max(1, int(self.spin_interval.get_value()))
+        self.settings.interval_minutes = int(self.spin_interval.get_value())
         self.settings.shuffle = self.chk_shuffle.get_active()
         self.settings.recursive = self.chk_recursive.get_active()
         self.settings.use_selected_only = self.chk_use_selected.get_active()
         want_autostart = self.chk_autostart.get_active()
-        self.settings.autostart = want_autostart
+
         if want_autostart:
             AutostartManager.enable(
                 app_name=self.T.get("app_name", "Mirage"),
@@ -381,9 +364,7 @@ class SettingsDialog(Gtk.Dialog):
             AutostartManager.disable()
 
         self.settings.save()
-
-        if callable(self.on_save):
-            self.on_save(self.settings)
+        self.on_save(self.settings)
         self.response(Gtk.ResponseType.OK)
 
 
@@ -398,18 +379,14 @@ class MirageApp:
         self.paused = False
         self.current_wallpaper: Optional[str] = None
         self.settings_dialog: Optional[SettingsDialog] = None
-        self.lang_radio_items: dict[str, Gtk.RadioMenuItem] = {}  # для отметки активного языка
         self._refresh_lang()
 
-        self.icon_name = str(ICON_FILE) if ICON_FILE.exists() else "image-x-generic"
+        icon_path = str(ICON_FILE) if ICON_FILE.is_file() else "image-x-generic"
 
-        if AppInd is None:
-            print("[Mirage] AppIndicator unavailable.")
-            self.menu = self._build_menu()
-        else:
-            self.ind = AppInd.Indicator.new(APP_ID, self.icon_name, AppInd.IndicatorCategory.APPLICATION_STATUS)
+        self.menu = self._build_menu()
+        if AppInd is not None:
+            self.ind = AppInd.Indicator.new(APP_ID, icon_path, AppInd.IndicatorCategory.APPLICATION_STATUS)
             self.ind.set_status(AppInd.IndicatorStatus.ACTIVE)
-            self.menu = self._build_menu()
             self.ind.set_menu(self.menu)
 
         self._reload_images()
@@ -423,7 +400,6 @@ class MirageApp:
         self.T = LANGUAGES.get(self.settings.language, LANGUAGES["ru"])
 
     def _on_lang_toggled(self, menu_item: Gtk.RadioMenuItem, lang: str):
-        # Чтобы не ловить событие при снятии галки со старого пункта:
         if menu_item.get_active() and lang != self.settings.language:
             self._set_language(lang)
 
@@ -440,21 +416,16 @@ class MirageApp:
 
         menu.append(Gtk.SeparatorMenuItem())
 
-        # Подменю языков с RadioMenuItem (показываем точку у активного)
         lang_item = Gtk.MenuItem(label=self.T["menu_language"])
         lang_menu = Gtk.Menu()
         group = None
-        self.lang_radio_items.clear()
         for lang in SUPPORTED_LANGS:
             label = LANGUAGES[lang]["language_name"]
+            radio = Gtk.RadioMenuItem.new_with_label(group, label)
             if group is None:
-                radio = Gtk.RadioMenuItem.new_with_label(None, label)
                 group = radio.get_group()
-            else:
-                radio = Gtk.RadioMenuItem.new_with_label(group, label)
             radio.set_active(lang == self.settings.language)
             radio.connect("toggled", self._on_lang_toggled, lang)
-            self.lang_radio_items[lang] = radio
             lang_menu.append(radio)
         lang_item.set_submenu(lang_menu)
         menu.append(lang_item)
@@ -478,7 +449,6 @@ class MirageApp:
         self.settings.language = lang
         self.settings.save()
         self._refresh_lang()
-        # Перестроим меню, чтобы тексты обновились (радио-точка тоже сохранится)
         self.menu = self._build_menu()
         if AppInd:
             self.ind.set_menu(self.menu)
@@ -487,7 +457,7 @@ class MirageApp:
 
     def _effective_selection(self) -> List[Path]:
         if self.settings.use_selected_only and self.settings.selected:
-            valid = [Path(p) for p in self.settings.selected if Path(p).exists()]
+            valid = [Path(p) for p in self.settings.selected if Path(p).is_file()]
             if valid:
                 return sorted(valid)
         return list_images(Path(self.settings.folder), self.settings.recursive)
@@ -496,10 +466,7 @@ class MirageApp:
         self.images = list_images(Path(self.settings.folder), self.settings.recursive)
         eff = self._effective_selection()
         self.playlist = eff.copy()
-        if not self.playlist:
-            self.index = 0
-            return
-        if self.settings.shuffle:
+        if self.settings.shuffle and self.playlist:
             random.shuffle(self.playlist)
         self.index = 0
 
@@ -542,19 +509,18 @@ class MirageApp:
             self.settings_dialog.present()
             return
 
+        def on_destroy(_dlg):
+            self.settings_dialog = None
+
         self.settings_dialog = SettingsDialog(
-            None,
-            self.settings,
+            parent=None,
+            settings=self.settings,
             on_save=self._on_settings_saved,
             T=self.T,
             current_wallpaper=self.current_wallpaper,
+            on_next=self.next_wallpaper,
         )
-
-        def _on_destroy(_dlg):
-            self.settings_dialog = None
-
-        self.settings_dialog.connect("destroy", _on_destroy)
-
+        self.settings_dialog.connect("destroy", on_destroy)
         self.settings_dialog.run()
         self.settings_dialog.destroy()
 
