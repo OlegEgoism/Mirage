@@ -4,8 +4,7 @@ import json
 import sys
 import stat
 import random
-import subprocess
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Callable
 
@@ -16,6 +15,7 @@ from language import LANGUAGES
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib, GdkPixbuf
 
+# Попытка импорта AppIndicator (Ayatana или классический)
 AppInd = None
 try:
     gi.require_version("AppIndicator3", "0.1")
@@ -25,11 +25,12 @@ except (ValueError, ImportError):
         gi.require_version("AyatanaAppIndicator3", "0.1")
         from gi.repository import AyatanaAppIndicator3 as AppInd
     except (ValueError, ImportError):
-        AppInd = None
+        pass  # AppInd остаётся None
 
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio
 
+# Константы приложения
 APP_ID = "mirage.tray"
 APP_VERSION = "1.1.0"
 APP_AUTHOR = "Oleg Pustovalov"
@@ -128,50 +129,48 @@ class Settings:
         if CONFIG_FILE.is_file():
             try:
                 data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-                base = asdict(cls())
-                base.update(data)
-                s = cls(**base)
+                valid_data = {
+                    k: v for k, v in data.items()
+                    if k in cls.__dataclass_fields__
+                }
+                s = cls(**valid_data)
                 s.autostart = AutostartManager.is_enabled()
                 return s
             except Exception as e:
                 print(f"[Mirage] Settings load error: {e}", file=sys.stderr)
+
         s = cls()
         s.autostart = AutostartManager.is_enabled()
         return s
 
     def save(self) -> None:
         try:
-            CONFIG_FILE.write_text(json.dumps(asdict(self), ensure_ascii=False, indent=2), encoding="utf-8")
+            CONFIG_FILE.write_text(
+                json.dumps(self.__dict__, ensure_ascii=False, indent=2),
+                encoding="utf-8"
+            )
         except Exception as e:
             print(f"[Mirage] Settings save error: {e}", file=sys.stderr)
 
 
 class WallpaperEngine:
     def __init__(self) -> None:
-        self._settings = Gio.Settings.new("org.gnome.desktop.background")
+        try:
+            self._settings = Gio.Settings.new("org.gnome.desktop.background")
+        except Exception as e:
+            print(f"[Mirage] Cannot access GNOME background settings: {e}", file=sys.stderr)
+            self._settings = None
 
     def set_wallpaper(self, path: str) -> None:
+        if not self._settings:
+            print("[Mirage] Wallpaper engine unavailable", file=sys.stderr)
+            return
         uri = f"file://{path}"
         try:
             self._settings.set_string("picture-uri", uri)
             self._settings.set_string("picture-uri-dark", uri)
-            self._settings.apply()
-        except Exception:
-            try:
-                subprocess.run(
-                    ["gsettings", "set", "org.gnome.desktop.background", "picture-uri", uri],
-                    check=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                subprocess.run(
-                    ["gsettings", "set", "org.gnome.desktop.background", "picture-uri-dark", uri],
-                    check=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-            except Exception as e:
-                print(f"[Mirage] Wallpaper error: {e}", file=sys.stderr)
+        except Exception as e:
+            print(f"[Mirage] Failed to set wallpaper: {e}", file=sys.stderr)
 
 
 def list_images(folder: Path, recursive: bool) -> List[Path]:
@@ -463,7 +462,6 @@ class MirageApp:
         return list_images(Path(self.settings.folder), self.settings.recursive)
 
     def _reload_images(self) -> None:
-        self.images = list_images(Path(self.settings.folder), self.settings.recursive)
         eff = self._effective_selection()
         self.playlist = eff.copy()
         if self.settings.shuffle and self.playlist:
