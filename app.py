@@ -261,10 +261,20 @@ class SettingsDialog(Gtk.Dialog):
         row = 0
         self.grid.attach(self.link_box, 0, row, 2, 1); row += 1
         self.grid.attach(self.chk_autostart, 0, row, 2, 1); row += 1
+
+        # --- Разделитель после Autostart ---
+        sep1 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        self.grid.attach(sep1, 0, row, 2, 1); row += 1
+
         self.grid.attach(self.lbl_folder, 0, row, 1, 1); self.grid.attach(self.btn_folder, 1, row, 1, 1); row += 1
         self.grid.attach(self.lbl_interval, 0, row, 1, 1); self.grid.attach(self.spin_interval, 1, row, 1, 1); row += 1
         self.grid.attach(self.chk_shuffle, 0, row, 2, 1); row += 1
         self.grid.attach(self.chk_recursive, 0, row, 2, 1); row += 1
+
+        # --- Разделитель после Recursive ---
+        sep2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        self.grid.attach(sep2, 0, row, 2, 1); row += 1
+
         self.grid.attach(self.chk_use_selected, 0, row, 2, 1); row += 1
         self.grid.attach(self.btn_pick, 1, row, 1, 1); row += 1
         self.grid.attach(self.lbl_selected_count, 0, row, 2, 1); row += 1
