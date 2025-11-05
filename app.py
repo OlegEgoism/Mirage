@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import sys
-import stat
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -43,10 +42,6 @@ CONFIG_FILE = CONFIG_DIR / "settings.json"
 ICON_FILE = Path(__file__).parent / "logo_app.png"
 SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
 
-AUTOSTART_DIR = Path.home() / ".config" / "autostart"
-AUTOSTART_DIR.mkdir(parents=True, exist_ok=True)
-AUTOSTART_FILE = AUTOSTART_DIR / "Mirage.desktop"
-
 SUPPORTED_LANGS = ["ru", "en"]
 
 
@@ -73,46 +68,6 @@ def _current_exec_command() -> str:
     return f'"{script_path}"'
 
 
-def _desktop_entry(name: str, comment: str, icon_path: Optional[Path]) -> str:
-    icon = str(icon_path.resolve()) if icon_path and icon_path.is_file() else "image-x-generic"
-    exec_cmd = _current_exec_command()
-    return (
-        "[Desktop Entry]\n"
-        "Type=Application\n"
-        f"Version={APP_VERSION}\n"
-        f"Name={name}\n"
-        f"Comment={comment}\n"
-        f"Exec={exec_cmd}\n"
-        f"Icon={icon}\n"
-        "Terminal=false\n"
-        "Categories=Utility;\n"
-        "X-GNOME-Autostart-enabled=true\n"
-    )
-
-
-class AutostartManager:
-    @staticmethod
-    def is_enabled() -> bool:
-        return AUTOSTART_FILE.is_file()
-
-    @staticmethod
-    def enable(app_name: str, comment: str) -> None:
-        try:
-            content = _desktop_entry(app_name, comment, ICON_FILE)
-            AUTOSTART_FILE.write_text(content, encoding="utf-8")
-            AUTOSTART_FILE.chmod(stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
-        except Exception as e:
-            print(f"[Mirage] Autostart enable error: {e}", file=sys.stderr)
-
-    @staticmethod
-    def disable() -> None:
-        try:
-            if AUTOSTART_FILE.is_file():
-                AUTOSTART_FILE.unlink()
-        except Exception as e:
-            print(f"[Mirage] Autostart disable error: {e}", file=sys.stderr)
-
-
 @dataclass
 class Settings:
     folder: str = str(Path.home() / "Pictures")
@@ -122,7 +77,6 @@ class Settings:
     use_selected_only: bool = False
     selected: List[str] = field(default_factory=list)
     language: str = "ru"
-    autostart: bool = False
 
     @classmethod
     def load(cls) -> "Settings":
@@ -133,15 +87,10 @@ class Settings:
                     k: v for k, v in data.items()
                     if k in cls.__dataclass_fields__
                 }
-                s = cls(**valid_data)
-                s.autostart = AutostartManager.is_enabled()
-                return s
+                return cls(**valid_data)
             except Exception as e:
                 print(f"[Mirage] Settings load error: {e}", file=sys.stderr)
-
-        s = cls()
-        s.autostart = AutostartManager.is_enabled()
-        return s
+        return cls()
 
     def save(self) -> None:
         try:
@@ -232,7 +181,6 @@ class SettingsDialog(Gtk.Dialog):
         self.chk_shuffle = Gtk.CheckButton(label=self.T["shuffle"], active=self.settings.shuffle)
         self.chk_recursive = Gtk.CheckButton(label=self.T["recursive"], active=self.settings.recursive)
         self.chk_use_selected = Gtk.CheckButton(label=self.T["use_selected"], active=self.settings.use_selected_only)
-        self.chk_autostart = Gtk.CheckButton(label=self.T.get("autostart", "Autostart"), active=AutostartManager.is_enabled())
 
         self.lbl_selected_count = Gtk.Label(halign=Gtk.Align.START)
         self.btn_pick = Gtk.Button(label=self.T["pick_images"])
@@ -260,20 +208,14 @@ class SettingsDialog(Gtk.Dialog):
 
         row = 0
         self.grid.attach(self.link_box, 0, row, 2, 1); row += 1
-        self.grid.attach(self.chk_autostart, 0, row, 2, 1); row += 1
-
-        # --- Разделитель после Autostart ---
-        sep1 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-        self.grid.attach(sep1, 0, row, 2, 1); row += 1
 
         self.grid.attach(self.lbl_folder, 0, row, 1, 1); self.grid.attach(self.btn_folder, 1, row, 1, 1); row += 1
         self.grid.attach(self.lbl_interval, 0, row, 1, 1); self.grid.attach(self.spin_interval, 1, row, 1, 1); row += 1
         self.grid.attach(self.chk_shuffle, 0, row, 2, 1); row += 1
         self.grid.attach(self.chk_recursive, 0, row, 2, 1); row += 1
 
-        # --- Разделитель после Recursive ---
-        sep2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-        self.grid.attach(sep2, 0, row, 2, 1); row += 1
+        sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        self.grid.attach(sep, 0, row, 2, 1); row += 1
 
         self.grid.attach(self.chk_use_selected, 0, row, 2, 1); row += 1
         self.grid.attach(self.btn_pick, 1, row, 1, 1); row += 1
@@ -297,7 +239,6 @@ class SettingsDialog(Gtk.Dialog):
         self.chk_shuffle.set_label(self.T["shuffle"])
         self.chk_recursive.set_label(self.T["recursive"])
         self.chk_use_selected.set_label(self.T["use_selected"])
-        self.chk_autostart.set_label(self.T.get("autostart", "Autostart"))
         self.btn_pick.set_label(self.T["pick_images"])
         self.lbl_preview.set_label(self.T["current_wallpaper"])
         self.btn_next.set_label(self.T["next"])
@@ -362,15 +303,6 @@ class SettingsDialog(Gtk.Dialog):
         self.settings.shuffle = self.chk_shuffle.get_active()
         self.settings.recursive = self.chk_recursive.get_active()
         self.settings.use_selected_only = self.chk_use_selected.get_active()
-        want_autostart = self.chk_autostart.get_active()
-
-        if want_autostart:
-            AutostartManager.enable(
-                app_name=self.T.get("app_name", "Mirage"),
-                comment="Automatic change of desktop wallpaper.",
-            )
-        else:
-            AutostartManager.disable()
 
         self.settings.save()
         self.on_save(self.settings)

@@ -24,7 +24,6 @@ LANGUAGES = {
         "formats_label": "Форматы",
         "images_filter_title": "Изображения",
         "filter_all": "Все файлы",
-        "autostart": "Автозапуск",
         "website_label": "GitHub: Mirage",
     },
     "en": {
@@ -52,7 +51,6 @@ LANGUAGES = {
         "formats_label": "Formats",
         "images_filter_title": "Images",
         "filter_all": "All files",
-        "autostart": "Autostart",
         "website_label": "GitHub: Mirage",
     },
 }
