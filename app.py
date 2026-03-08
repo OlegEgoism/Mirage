@@ -5,14 +5,14 @@ import sys
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Callable
+from typing import Any, List, Optional, Callable
 
 import gi
 
 from language import LANGUAGES
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, GdkPixbuf
+from gi.repository import Gtk, GLib, Gdk, GdkPixbuf
 
 # Попытка импорта AppIndicator (Ayatana или классический)
 AppInd = None
@@ -43,6 +43,35 @@ ICON_FILE = Path(__file__).parent / "logo_app.png"
 SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
 
 SUPPORTED_LANGS = ["ru", "en"]
+
+APP_CSS = """
+.mirage-window {
+    background: linear-gradient(180deg, #1e1f29 0%, #14151c 100%);
+}
+
+.mirage-card {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 12px;
+}
+
+.mirage-heading {
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.mirage-preview {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 6px;
+}
+
+.mirage-primary {
+    background: #4f46e5;
+    color: #ffffff;
+    border-radius: 10px;
+}
+"""
 
 
 def _format_exts_for_label(exts: set[str]) -> str:
@@ -78,15 +107,37 @@ class Settings:
     selected: List[str] = field(default_factory=list)
     language: str = "ru"
 
+    @staticmethod
+    def _coerce_loaded_data(data: dict[str, Any]) -> dict[str, Any]:
+        cleaned: dict[str, Any] = {}
+
+        if isinstance(data.get("folder"), str):
+            cleaned["folder"] = data["folder"]
+
+        interval = data.get("interval_minutes")
+        if isinstance(interval, (int, float)):
+            cleaned["interval_minutes"] = max(1, min(1440, int(interval)))
+
+        for flag in ("shuffle", "recursive", "use_selected_only"):
+            if isinstance(data.get(flag), bool):
+                cleaned[flag] = data[flag]
+
+        selected = data.get("selected")
+        if isinstance(selected, list):
+            cleaned["selected"] = [str(item) for item in selected if isinstance(item, str)]
+
+        language = data.get("language")
+        if isinstance(language, str) and language in SUPPORTED_LANGS:
+            cleaned["language"] = language
+
+        return cleaned
+
     @classmethod
     def load(cls) -> "Settings":
         if CONFIG_FILE.is_file():
             try:
                 data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-                valid_data = {
-                    k: v for k, v in data.items()
-                    if k in cls.__dataclass_fields__
-                }
+                valid_data = cls._coerce_loaded_data(data if isinstance(data, dict) else {})
                 return cls(**valid_data)
             except Exception as e:
                 print(f"[Mirage] Settings load error: {e}", file=sys.stderr)
@@ -114,7 +165,7 @@ class WallpaperEngine:
         if not self._settings:
             print("[Mirage] Wallpaper engine unavailable", file=sys.stderr)
             return
-        uri = f"file://{path}"
+        uri = GLib.filename_to_uri(path)
         try:
             self._settings.set_string("picture-uri", uri)
             self._settings.set_string("picture-uri-dark", uri)
@@ -128,10 +179,15 @@ def list_images(folder: Path, recursive: bool) -> List[Path]:
     exts = {e.lower() for e in SUPPORTED_EXTS}
     images: List[Path] = []
 
-    iterator = folder.rglob("*") if recursive else folder.iterdir()
-    for p in iterator:
-        if p.is_file() and p.suffix.lower() in exts:
-            images.append(p)
+    try:
+        iterator = folder.rglob("*") if recursive else folder.iterdir()
+        for p in iterator:
+            if p.is_file() and p.suffix.lower() in exts:
+                images.append(p)
+    except PermissionError as e:
+        print(f"[Mirage] Permission denied while scanning {folder}: {e}", file=sys.stderr)
+    except OSError as e:
+        print(f"[Mirage] Cannot scan folder {folder}: {e}", file=sys.stderr)
 
     return sorted(images)
 
@@ -149,14 +205,19 @@ class SettingsDialog(Gtk.Dialog):
         super().__init__(title=T["settings_title"], transient_for=parent, flags=0)
         self.set_modal(True)
         self.set_default_size(360, 540)
+        self.get_style_context().add_class("mirage-window")
         self.settings = settings
         self.on_save = on_save
         self.on_next = on_next
         self.T = T
 
         content = self.get_content_area()
+        self.root_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=12)
+        content.add(self.root_box)
+
         self.grid = Gtk.Grid(column_spacing=10, row_spacing=10, margin=12)
-        content.add(self.grid)
+        self.grid.get_style_context().add_class("mirage-card")
+        self.root_box.pack_start(self.grid, True, True, 0)
 
         self.link_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.link_box.set_hexpand(True)
@@ -183,6 +244,7 @@ class SettingsDialog(Gtk.Dialog):
         self.chk_use_selected = Gtk.CheckButton(label=self.T["use_selected"], active=self.settings.use_selected_only)
 
         self.lbl_selected_count = Gtk.Label(halign=Gtk.Align.START)
+        self.lbl_selected_count.get_style_context().add_class("mirage-heading")
         self.btn_pick = Gtk.Button(label=self.T["pick_images"])
         self.btn_pick.connect("clicked", self._pick_images)
 
@@ -190,13 +252,18 @@ class SettingsDialog(Gtk.Dialog):
         self.lbl_formats.get_style_context().add_class("dim-label")
 
         self.lbl_preview = Gtk.Label(label=self.T["current_wallpaper"], halign=Gtk.Align.START)
+        self.lbl_preview.get_style_context().add_class("mirage-heading")
         self.preview = Gtk.Image()
         self.preview.set_size_request(220, 130)
+        self.preview_frame = Gtk.Frame()
+        self.preview_frame.get_style_context().add_class("mirage-preview")
+        self.preview_frame.add(self.preview)
 
         self.btn_next = Gtk.Button(label=self.T["next"])
         self.btn_next.connect("clicked", lambda *_: self.on_next() if self.on_next else None)
 
         self.btn_save = Gtk.Button(label=self.T["btn_save"])
+        self.btn_save.get_style_context().add_class("mirage-primary")
         self.btn_cancel = Gtk.Button(label=self.T["btn_cancel"])
         self.btn_save.connect("clicked", self._on_save)
         self.btn_cancel.connect("clicked", lambda *_: self.response(Gtk.ResponseType.CANCEL))
@@ -221,7 +288,7 @@ class SettingsDialog(Gtk.Dialog):
         self.grid.attach(self.btn_pick, 1, row, 1, 1); row += 1
         self.grid.attach(self.lbl_selected_count, 0, row, 2, 1); row += 1
         self.grid.attach(self.lbl_formats, 0, row, 2, 1); row += 1
-        self.grid.attach(self.lbl_preview, 0, row, 1, 1); self.grid.attach(self.preview, 1, row, 1, 1); row += 1
+        self.grid.attach(self.lbl_preview, 0, row, 1, 1); self.grid.attach(self.preview_frame, 1, row, 1, 1); row += 1
         self.grid.attach(self.btn_box, 0, row, 2, 1)
 
         self._update_selected_label()
@@ -311,6 +378,7 @@ class SettingsDialog(Gtk.Dialog):
 
 class MirageApp:
     def __init__(self):
+        self._load_css()
         self.settings = Settings.load()
         self.wall = WallpaperEngine()
         self.images: List[Path] = []
@@ -339,6 +407,20 @@ class MirageApp:
 
     def _refresh_lang(self):
         self.T = LANGUAGES.get(self.settings.language, LANGUAGES["ru"])
+
+    def _load_css(self) -> None:
+        provider = Gtk.CssProvider()
+        try:
+            provider.load_from_data(APP_CSS.encode("utf-8"))
+            screen = Gdk.Screen.get_default()
+            if screen is not None:
+                Gtk.StyleContext.add_provider_for_screen(
+                    screen,
+                    provider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+                )
+        except Exception as e:
+            print(f"[Mirage] CSS load warning: {e}", file=sys.stderr)
 
     def _on_lang_toggled(self, menu_item: Gtk.RadioMenuItem, lang: str):
         if menu_item.get_active() and lang != self.settings.language:
@@ -398,7 +480,10 @@ class MirageApp:
 
     def _effective_selection(self) -> List[Path]:
         if self.settings.use_selected_only and self.settings.selected:
-            valid = [Path(p) for p in self.settings.selected if Path(p).is_file()]
+            valid = [
+                Path(p) for p in self.settings.selected
+                if Path(p).is_file() and Path(p).suffix.lower() in SUPPORTED_EXTS
+            ]
             if valid:
                 return sorted(valid)
         return list_images(Path(self.settings.folder), self.settings.recursive)
