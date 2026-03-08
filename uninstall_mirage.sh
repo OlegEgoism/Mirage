@@ -1,13 +1,11 @@
 #!/bin/bash
 # Uninstall Mirage + очистка артефактов Nuitka
 # Usage:
-#   ./scripts/uninstall_mirage.sh [--dry-run] [--purge] [--all] [-y|--yes]
+#   ./uninstall_mirage.sh [--dry-run] [--purge] [--all] [-y|--yes]
 
 set -euo pipefail
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-cd "$PROJECT_DIR"
+PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 PACKAGE_NAME="Mirage"
 ENTRY_BASENAME="app"

@@ -1,22 +1,18 @@
 #!/bin/bash
 
 # Nuitka build for Mirage
-# Структура проекта (из корня папки mirage/):
-#   src/app.py
-#   src/language.py
-#   assets/logo_app.png
+# Структура проекта (из корня репозитория):
+#   app.py
+#   language.py
+#   logo_app.png
 #   requirements.txt
-#   scripts/build_nuitka.sh
+#   build_nuitka.sh
 
 set -e
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-cd "$PROJECT_DIR"
-
 PACKAGE_NAME="Mirage"
 VERSION="1.1.0"
-ENTRYPOINT="src/app.py"
+ENTRYPOINT="app.py"
 ENTRY_BASENAME="app"
 
 echo "🔥 Building ${PACKAGE_NAME} (Nuitka)…"
@@ -97,8 +93,8 @@ write_desktop_file_menu() {
 echo "🚀 Compiling (standalone)…"
 "$NUITKA_CMD" --standalone \
   --enable-plugin=gi \
-  --include-data-files=assets/logo_app.png=assets/logo_app.png \
-  --include-data-files=src/language.py=src/language.py \
+  --include-data-files=logo_app.png=logo_app.png \
+  --include-data-files=language.py=language.py \
   --assume-yes-for-downloads \
   --output-dir=build_standalone \
   --follow-imports \
@@ -128,8 +124,8 @@ echo "🗜️ Compiling (onefile, experimental)…"
 set +e
 "$NUITKA_CMD" --onefile \
   --enable-plugin=gi \
-  --include-data-files=assets/logo_app.png=assets/logo_app.png \
-  --include-data-files=src/language.py=src/language.py \
+  --include-data-files=logo_app.png=logo_app.png \
+  --include-data-files=language.py=language.py \
   --assume-yes-for-downloads \
   --output-filename="${PACKAGE_NAME}-onefile" \
   --follow-imports \
@@ -154,8 +150,8 @@ else
   FINAL_EXEC="$ABS_RUNNER_PATH"
 fi
 
-ICON_CANDIDATE1="$(pwd)/${PACKAGE_NAME}-standalone/assets/logo_app.png"
-ICON_CANDIDATE2="$(pwd)/assets/logo_app.png"
+ICON_CANDIDATE1="$(pwd)/${PACKAGE_NAME}-standalone/logo_app.png"
+ICON_CANDIDATE2="$(pwd)/logo_app.png"
 if [[ -f "$ICON_CANDIDATE1" ]]; then
   FINAL_ICON="$ICON_CANDIDATE1"
 elif [[ -f "$ICON_CANDIDATE2" ]]; then
