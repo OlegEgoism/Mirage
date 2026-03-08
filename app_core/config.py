@@ -10,5 +10,6 @@ CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_FILE = CONFIG_DIR / "settings.json"
 
 ICON_FILE = Path(__file__).resolve().parent.parent / "logo_app.png"
+STYLE_FILE = Path(__file__).resolve().parent / "theme.css"
 SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
 SUPPORTED_LANGS = ["ru", "en"]

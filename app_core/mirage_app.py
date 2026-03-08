@@ -4,8 +4,8 @@ import random
 from pathlib import Path
 from typing import List, Optional
 
-from .config import APP_ID, ICON_FILE, SUPPORTED_LANGS
-from .gtk_runtime import AppInd, GLib, Gtk
+from .config import APP_ID, ICON_FILE, STYLE_FILE, SUPPORTED_LANGS
+from .gtk_runtime import AppInd, GLib, Gdk, Gtk
 from .image_library import ImageLibrary
 from .language import LANGUAGES
 from .settings_dialog import SettingsDialog
@@ -24,6 +24,7 @@ class MirageApp:
         self.current_wallpaper: Optional[str] = None
         self.settings_dialog: Optional[SettingsDialog] = None
         self._refresh_language()
+        self._load_css()
 
         icon_path = str(ICON_FILE) if ICON_FILE.is_file() else "image-x-generic"
 
@@ -42,6 +43,23 @@ class MirageApp:
 
     def _refresh_language(self):
         self.T = LANGUAGES.get(self.settings.language, LANGUAGES["ru"])
+
+    def _load_css(self) -> None:
+        if not STYLE_FILE.is_file():
+            return
+
+        screen = Gdk.Screen.get_default()
+        if screen is None:
+            return
+
+        provider = Gtk.CssProvider()
+        provider.load_from_path(str(STYLE_FILE))
+        Gtk.StyleContext.add_provider_for_screen(
+            screen,
+            provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+        )
+        self._css_provider = provider
 
     def _on_lang_toggled(self, menu_item: Gtk.RadioMenuItem, lang: str):
         if menu_item.get_active() and lang != self.settings.language:

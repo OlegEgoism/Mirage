@@ -1,0 +1,44 @@
+.mirage-settings {
+  background: #1e232c;
+  color: #e6edf3;
+}
+
+.mirage-content {
+  padding: 2px;
+}
+
+.mirage-grid {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.mirage-header {
+  margin-bottom: 4px;
+}
+
+.mirage-info {
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+.mirage-preview-frame {
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.22);
+  padding: 4px;
+}
+
+.mirage-actions button {
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.mirage-settings button {
+  background-image: none;
+}
+
+.mirage-settings check,
+.mirage-settings radio {
+  min-height: 14px;
+}

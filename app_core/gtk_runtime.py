@@ -2,7 +2,7 @@ import gi
 
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, GdkPixbuf
+from gi.repository import Gtk, GLib, Gdk, GdkPixbuf
 
 AppInd = None
 try:
@@ -18,4 +18,4 @@ except (ValueError, ImportError):
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio
 
-__all__ = ["Gtk", "GLib", "GdkPixbuf", "Gio", "AppInd"]
+__all__ = ["Gtk", "GLib", "Gdk", "GdkPixbuf", "Gio", "AppInd"]

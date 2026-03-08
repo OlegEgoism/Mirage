@@ -27,11 +27,16 @@ class SettingsDialog(Gtk.Dialog):
         self.on_next = on_next
         self.T = translations
 
+        self.get_style_context().add_class("mirage-settings")
+
         content = self.get_content_area()
+        content.get_style_context().add_class("mirage-content")
         self.grid = Gtk.Grid(column_spacing=8, row_spacing=6, margin=10)
+        self.grid.get_style_context().add_class("mirage-grid")
         content.add(self.grid)
 
         self.link_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.link_box.get_style_context().add_class("mirage-header")
         self.link_box.set_hexpand(True)
         self.link_box.set_halign(Gtk.Align.END)
         self.link_button = Gtk.LinkButton(uri=APP_WEBSITE, label=self.T.get("website_label", "GitHub: Mirage"))
@@ -67,10 +72,14 @@ class SettingsDialog(Gtk.Dialog):
         self.lbl_info = Gtk.Label(halign=Gtk.Align.START)
         self.lbl_info.set_xalign(0)
         self.lbl_info.get_style_context().add_class("dim-label")
+        self.lbl_info.get_style_context().add_class("mirage-info")
 
         self.lbl_preview = Gtk.Label(label=self.T["current_wallpaper"], halign=Gtk.Align.START)
         self.preview = Gtk.Image()
         self.preview.set_size_request(200, 110)
+        self.preview_frame = Gtk.Frame()
+        self.preview_frame.get_style_context().add_class("mirage-preview-frame")
+        self.preview_frame.add(self.preview)
 
         self.btn_next = Gtk.Button(label=self.T["next"])
         self.btn_next.connect("clicked", lambda *_: self.on_next() if self.on_next else None)
@@ -81,6 +90,7 @@ class SettingsDialog(Gtk.Dialog):
         self.btn_cancel.connect("clicked", lambda *_: self.response(Gtk.ResponseType.CANCEL))
 
         self.btn_box = Gtk.Box(spacing=6, halign=Gtk.Align.START)
+        self.btn_box.get_style_context().add_class("mirage-actions")
         self.btn_box.pack_start(self.btn_next, False, False, 0)
         self.btn_box.pack_start(self.btn_save, False, False, 0)
         self.btn_box.pack_start(self.btn_cancel, False, False, 0)
@@ -117,7 +127,7 @@ class SettingsDialog(Gtk.Dialog):
         row += 1
 
         self.grid.attach(self.lbl_preview, 0, row, 1, 1)
-        self.grid.attach(self.preview, 1, row, 1, 1)
+        self.grid.attach(self.preview_frame, 1, row, 1, 1)
         row += 1
 
         self.grid.attach(self.btn_box, 0, row, 2, 1)
