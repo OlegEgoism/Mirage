@@ -2,7 +2,7 @@
 "Mirage" Application
 </h1>
 
-<img src="logo_app.png" width="10%" />
+<img src="assets/logo_app.png" width="10%" />
 
 <h2 style="color: chocolate">
 Application Description and Features
@@ -32,7 +32,7 @@ Made By ❤ [OlegEgoism](https://github.com/OlegEgoism)
 - Use only selected images
 - Language
 
-<img src="info.png" width="50%" />
+<img src="assets/info.png" width="50%" />
 
 <h3>Available Interface Languages</h3>
 
@@ -53,13 +53,13 @@ sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-appindicator3
 <h3>💡 Install Python dependencies</h3>
 
 ```bash
-pip install -r requirements.txt
+pip install -r mirage/requirements.txt
 ```
 
 <h3>💡 Launching the application</h3>
 
 ```bash
-python3 app.py
+python3 mirage/src/app.py
 ```
 
 <h2 style="color: chocolate">
@@ -68,8 +68,8 @@ python3 app.py
 <h3>💡 Launch file "build.sh" (assembly time up to 5 minutes)</h3>
 
 ```bash
-chmod +x build_nuitka.sh
-./build_nuitka.sh
+chmod +x mirage/scripts/build_nuitka.sh
+./mirage/scripts/build_nuitka.sh
 ```
 
 <h3>💡 Checking the created file Mirage-onefile</h3>
@@ -83,9 +83,9 @@ ls -l *Mirage-onefile
 </h2>
 
 ```bash
-chmod +x uninstall_mirage.sh
-./uninstall_mirage.sh --all --purge -y
-./uninstall_mirage.sh --all --dry-run
+chmod +x mirage/scripts/uninstall_mirage.sh
+./mirage/scripts/uninstall_mirage.sh --all --purge -y
+./mirage/scripts/uninstall_mirage.sh --all --dry-run
 ```
 
 

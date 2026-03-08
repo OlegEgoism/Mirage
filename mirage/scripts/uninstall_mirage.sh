@@ -1,12 +1,16 @@
 #!/bin/bash
 # Uninstall Mirage + очистка артефактов Nuitka
 # Usage:
-#   ./uninstall_mirage.sh [--dry-run] [--purge] [--all] [-y|--yes]
+#   ./scripts/uninstall_mirage.sh [--dry-run] [--purge] [--all] [-y|--yes]
 
 set -euo pipefail
 
-PACKAGE_NAME="Mirage"   # имя продукта (ярлыки/папки)
-ENTRY_BASENAME="app"    # базовое имя входного файла (app.py -> app.*)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_DIR"
+
+PACKAGE_NAME="Mirage"
+ENTRY_BASENAME="app"
 
 DRY_RUN=false
 PURGE=false
@@ -46,9 +50,9 @@ APP_MENU_DIR="$HOME/.local/share/applications"
 AUTOSTART_DIR="$HOME/.config/autostart"
 CONFIG_DIR="$HOME/.config/mirage"
 
-STANDALONE_DIR="$PWD/${PACKAGE_NAME}-standalone"
-RUNNER_FILE="$PWD/${PACKAGE_NAME}-run"
-ONEFILE_BIN="$PWD/${PACKAGE_NAME}-onefile"
+STANDALONE_DIR="$PROJECT_DIR/${PACKAGE_NAME}-standalone"
+RUNNER_FILE="$PROJECT_DIR/${PACKAGE_NAME}-run"
+ONEFILE_BIN="$PROJECT_DIR/${PACKAGE_NAME}-onefile"
 
 DESKTOP_MAIN="${APP_MENU_DIR}/${PACKAGE_NAME}.desktop"
 LEGACY_ONE_AUTOSTART="${AUTOSTART_DIR}/${PACKAGE_NAME}-onefile.desktop"
@@ -56,17 +60,17 @@ LEGACY_AUTOSTART="${AUTOSTART_DIR}/${PACKAGE_NAME}.desktop"
 DEFAULT_AUTOSTART="${AUTOSTART_DIR}/${PACKAGE_NAME}.desktop"
 
 BUILD_DIRS=(
-  "$PWD/build_standalone"
-  "$PWD/${PACKAGE_NAME}.build"
-  "$PWD/${PACKAGE_NAME}.dist"
-  "$PWD/${PACKAGE_NAME}.onefile-build"
-  "$PWD/${ENTRY_BASENAME}.build"
-  "$PWD/${ENTRY_BASENAME}.dist"
-  "$PWD/${ENTRY_BASENAME}.onefile-build"
+  "$PROJECT_DIR/build_standalone"
+  "$PROJECT_DIR/${PACKAGE_NAME}.build"
+  "$PROJECT_DIR/${PACKAGE_NAME}.dist"
+  "$PROJECT_DIR/${PACKAGE_NAME}.onefile-build"
+  "$PROJECT_DIR/${ENTRY_BASENAME}.build"
+  "$PROJECT_DIR/${ENTRY_BASENAME}.dist"
+  "$PROJECT_DIR/${ENTRY_BASENAME}.onefile-build"
 )
 
 shopt -s nullglob
-for d in "$PWD"/*.build "$PWD"/*.dist "$PWD"/*.onefile-build; do
+for d in "$PROJECT_DIR"/*.build "$PROJECT_DIR"/*.dist "$PROJECT_DIR"/*.onefile-build; do
   BUILD_DIRS+=("$d")
 done
 shopt -u nullglob
