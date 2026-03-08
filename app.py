@@ -45,33 +45,69 @@ SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
 SUPPORTED_LANGS = ["ru", "en"]
 
 APP_CSS = """
-.mirage-window {
-    background: linear-gradient(180deg, #1e1f29 0%, #14151c 100%);
+* {
+    font-family: Inter, "SF Pro Text", Roboto, "Noto Sans", sans-serif;
 }
 
-.mirage-card {
-    background: rgba(255, 255, 255, 0.06);
+.mirage-window {
+    background-color: #0f172a;
+}
+
+.mirage-hero {
+    background-image: linear-gradient(120deg, #312e81, #3b82f6);
     border-radius: 14px;
     padding: 12px;
 }
 
-.mirage-heading {
+.mirage-title {
+    color: #ffffff;
+    font-size: 18px;
     font-weight: 700;
+}
+
+.mirage-card {
+    background-color: #111827;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 14px;
+}
+
+.mirage-heading {
+    color: #e5e7eb;
+    font-weight: 600;
     letter-spacing: 0.2px;
 }
 
 .mirage-preview {
-    background: rgba(255, 255, 255, 0.08);
+    background-color: #0b1220;
     border-radius: 10px;
-    padding: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px;
+}
+
+.mirage-primary,
+.mirage-secondary {
+    border-radius: 10px;
+    padding: 6px 12px;
 }
 
 .mirage-primary {
-    background: #4f46e5;
+    background-image: linear-gradient(120deg, #4f46e5, #6366f1);
     color: #ffffff;
-    border-radius: 10px;
+}
+
+.mirage-secondary {
+    background-color: #1f2937;
+    color: #e5e7eb;
+}
+
+.mirage-window check,
+.mirage-window label {
+    color: #d1d5db;
 }
 """
+
+
 
 
 def _format_exts_for_label(exts: set[str]) -> str:
@@ -204,7 +240,8 @@ class SettingsDialog(Gtk.Dialog):
     ):
         super().__init__(title=T["settings_title"], transient_for=parent, flags=0)
         self.set_modal(True)
-        self.set_default_size(360, 540)
+        self.set_resizable(False)
+        self.set_default_size(420, 620)
         self.get_style_context().add_class("mirage-window")
         self.settings = settings
         self.on_save = on_save
@@ -212,10 +249,27 @@ class SettingsDialog(Gtk.Dialog):
         self.T = T
 
         content = self.get_content_area()
-        self.root_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=12)
+        self.root_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin=14)
         content.add(self.root_box)
 
-        self.grid = Gtk.Grid(column_spacing=10, row_spacing=10, margin=12)
+        self.hero_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        self.hero_box.get_style_context().add_class("mirage-hero")
+        self.root_box.pack_start(self.hero_box, False, False, 0)
+
+        self.hero_icon = Gtk.Image.new_from_file(str(ICON_FILE)) if ICON_FILE.is_file() else Gtk.Image.new_from_icon_name("image-x-generic", Gtk.IconSize.DIALOG)
+        self.hero_icon.set_pixel_size(42)
+        self.hero_box.pack_start(self.hero_icon, False, False, 0)
+
+        self.hero_texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        self.hero_title = Gtk.Label(label=self.T.get("app_name", "Mirage"), xalign=0)
+        self.hero_title.get_style_context().add_class("mirage-title")
+        self.hero_subtitle = Gtk.Label(label=self.T.get("settings_subtitle", "Personalize wallpaper rotation"), xalign=0)
+        self.hero_subtitle.get_style_context().add_class("dim-label")
+        self.hero_texts.pack_start(self.hero_title, False, False, 0)
+        self.hero_texts.pack_start(self.hero_subtitle, False, False, 0)
+        self.hero_box.pack_start(self.hero_texts, True, True, 0)
+
+        self.grid = Gtk.Grid(column_spacing=12, row_spacing=10, margin=14)
         self.grid.get_style_context().add_class("mirage-card")
         self.root_box.pack_start(self.grid, True, True, 0)
 
@@ -226,6 +280,7 @@ class SettingsDialog(Gtk.Dialog):
         self.link_box.pack_end(self.link_button, False, False, 0)
 
         self.lbl_folder = Gtk.Label(label=self.T["folder_label"], halign=Gtk.Align.START)
+        self.lbl_folder.get_style_context().add_class("mirage-heading")
         self.btn_folder = Gtk.FileChooserButton(action=Gtk.FileChooserAction.SELECT_FOLDER)
         self.btn_folder.set_filename(self.settings.folder)
 
@@ -242,10 +297,12 @@ class SettingsDialog(Gtk.Dialog):
         self.chk_shuffle = Gtk.CheckButton(label=self.T["shuffle"], active=self.settings.shuffle)
         self.chk_recursive = Gtk.CheckButton(label=self.T["recursive"], active=self.settings.recursive)
         self.chk_use_selected = Gtk.CheckButton(label=self.T["use_selected"], active=self.settings.use_selected_only)
+        self.chk_use_selected.connect("toggled", self._sync_selection_controls)
 
         self.lbl_selected_count = Gtk.Label(halign=Gtk.Align.START)
         self.lbl_selected_count.get_style_context().add_class("mirage-heading")
         self.btn_pick = Gtk.Button(label=self.T["pick_images"])
+        self.btn_pick.get_style_context().add_class("mirage-secondary")
         self.btn_pick.connect("clicked", self._pick_images)
 
         self.lbl_formats = Gtk.Label(halign=Gtk.Align.START)
@@ -254,24 +311,26 @@ class SettingsDialog(Gtk.Dialog):
         self.lbl_preview = Gtk.Label(label=self.T["current_wallpaper"], halign=Gtk.Align.START)
         self.lbl_preview.get_style_context().add_class("mirage-heading")
         self.preview = Gtk.Image()
-        self.preview.set_size_request(220, 130)
+        self.preview.set_size_request(250, 148)
         self.preview_frame = Gtk.Frame()
         self.preview_frame.get_style_context().add_class("mirage-preview")
         self.preview_frame.add(self.preview)
 
         self.btn_next = Gtk.Button(label=self.T["next"])
+        self.btn_next.get_style_context().add_class("mirage-secondary")
         self.btn_next.connect("clicked", lambda *_: self.on_next() if self.on_next else None)
 
         self.btn_save = Gtk.Button(label=self.T["btn_save"])
         self.btn_save.get_style_context().add_class("mirage-primary")
         self.btn_cancel = Gtk.Button(label=self.T["btn_cancel"])
+        self.btn_cancel.get_style_context().add_class("mirage-secondary")
         self.btn_save.connect("clicked", self._on_save)
         self.btn_cancel.connect("clicked", lambda *_: self.response(Gtk.ResponseType.CANCEL))
 
-        self.btn_box = Gtk.Box(spacing=6, halign=Gtk.Align.START)
+        self.btn_box = Gtk.Box(spacing=6, halign=Gtk.Align.END)
         self.btn_box.pack_start(self.btn_next, False, False, 0)
-        self.btn_box.pack_start(self.btn_save, False, False, 0)
         self.btn_box.pack_start(self.btn_cancel, False, False, 0)
+        self.btn_box.pack_start(self.btn_save, False, False, 0)
 
         row = 0
         self.grid.attach(self.link_box, 0, row, 2, 1); row += 1
@@ -294,11 +353,14 @@ class SettingsDialog(Gtk.Dialog):
         self._update_selected_label()
         self._update_formats_label()
         self._update_preview(current_wallpaper)
+        self._sync_selection_controls()
         self.show_all()
 
     def _apply_language(self, T: dict) -> None:
         self.T = T
         self.set_title(self.T["settings_title"])
+        self.hero_title.set_label(self.T.get("app_name", "Mirage"))
+        self.hero_subtitle.set_label(self.T.get("settings_subtitle", "Personalize wallpaper rotation"))
         self.link_button.set_label(self.T.get("website_label", "GitHub: Mirage"))
         self.lbl_folder.set_label(self.T["folder_label"])
         self.btn_folder.set_title(self.T["folder_label"])
@@ -312,6 +374,7 @@ class SettingsDialog(Gtk.Dialog):
         self.btn_save.set_label(self.T["btn_save"])
         self.btn_cancel.set_label(self.T["btn_cancel"])
         self._update_formats_label()
+        self._update_selected_label()
 
     def _update_selected_label(self) -> None:
         count = len(self.settings.selected)
@@ -322,11 +385,16 @@ class SettingsDialog(Gtk.Dialog):
         exts_str = _format_exts_for_label(SUPPORTED_EXTS)
         self.lbl_formats.set_text(f"{title}: {exts_str}")
 
+    def _sync_selection_controls(self, *_):
+        selected_mode = self.chk_use_selected.get_active()
+        self.btn_pick.set_sensitive(selected_mode)
+        self.lbl_selected_count.set_sensitive(selected_mode)
+
     def _update_preview(self, path: Optional[str]) -> None:
         if path and Path(path).is_file():
             try:
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    path, width=220, height=130, preserve_aspect_ratio=True
+                    path, width=250, height=148, preserve_aspect_ratio=True
                 )
                 self.preview.set_from_pixbuf(pixbuf)
             except Exception:

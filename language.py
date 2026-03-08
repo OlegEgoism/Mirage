@@ -11,6 +11,7 @@ LANGUAGES = {
         "menu_language": "Язык",
         # Настройки
         "settings_title": "Настройки",
+        "settings_subtitle": "Персонализируйте смену обоев",
         "folder_label": "Папка с изображениями:",
         "interval_label": "Интервал (минуты):",
         "shuffle": "Случайный порядок",
@@ -38,6 +39,7 @@ LANGUAGES = {
         "menu_language": "Language",
         # Settings
         "settings_title": "Settings",
+        "settings_subtitle": "Personalize wallpaper rotation",
         "folder_label": "Images folder:",
         "interval_label": "Interval (minutes):",
         "shuffle": "Shuffle order",
