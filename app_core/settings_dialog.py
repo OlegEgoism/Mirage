@@ -63,6 +63,7 @@ class SettingsDialog(Gtk.Dialog):
         self.lbl_selected_count = Gtk.Label(halign=Gtk.Align.START)
         self.lbl_selected_count.set_xalign(0)
         self.btn_pick = Gtk.Button(label=self.T["pick_images"])
+        self.btn_pick.get_style_context().add_class("mirage-secondary")
         self.btn_pick.connect("clicked", self._pick_images)
 
         self.lbl_formats = Gtk.Label(halign=Gtk.Align.START)
@@ -82,10 +83,13 @@ class SettingsDialog(Gtk.Dialog):
         self.preview_frame.add(self.preview)
 
         self.btn_next = Gtk.Button(label=self.T["next"])
+        self.btn_next.get_style_context().add_class("mirage-secondary")
         self.btn_next.connect("clicked", lambda *_: self.on_next() if self.on_next else None)
 
         self.btn_save = Gtk.Button(label=self.T["btn_save"])
+        self.btn_save.get_style_context().add_class("suggested-action")
         self.btn_cancel = Gtk.Button(label=self.T["btn_cancel"])
+        self.btn_cancel.get_style_context().add_class("mirage-secondary")
         self.btn_save.connect("clicked", self._on_save)
         self.btn_cancel.connect("clicked", lambda *_: self.response(Gtk.ResponseType.CANCEL))
 

@@ -1,3 +1,81 @@
+* {
+  -GtkWidget-focus-line-width: 1;
+  -GtkWidget-focus-padding: 0;
+}
+
+window,
+dialog,
+box,
+grid {
+  background: #1e232c;
+  color: #e6edf3;
+}
+
+menu,
+menuitem {
+  background: #232a36;
+  color: #e6edf3;
+}
+
+menuitem:hover {
+  background: #2f3847;
+}
+
+label {
+  color: #dce4ec;
+}
+
+entry,
+spinbutton,
+button,
+combobox,
+filechooserbutton {
+  border-radius: 7px;
+}
+
+entry,
+spinbutton {
+  background: #151a22;
+  color: #e6edf3;
+  border: 1px solid #3a4457;
+  padding: 5px 7px;
+}
+
+checkbutton,
+radiobutton {
+  color: #dce4ec;
+}
+
+button {
+  background-image: none;
+  background: #2d3644;
+  color: #f2f5f8;
+  border: 1px solid #42506a;
+  padding: 5px 10px;
+}
+
+button:hover {
+  background: #364258;
+}
+
+button:active {
+  background: #2a3447;
+}
+
+button.suggested-action {
+  background: #2e7d57;
+  border-color: #3e9a6e;
+  color: #ffffff;
+}
+
+button.suggested-action:hover {
+  background: #379568;
+}
+
+separator {
+  color: #3a4457;
+}
+
 .mirage-settings {
   background: #1e232c;
   color: #e6edf3;
@@ -34,8 +112,9 @@
   border-radius: 6px;
 }
 
-.mirage-settings button {
-  background-image: none;
+.mirage-secondary {
+  background: #2a3342;
+  border-color: #42506a;
 }
 
 .mirage-settings check,
