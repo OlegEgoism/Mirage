@@ -1,0 +1,14 @@
+from pathlib import Path
+
+APP_ID = "mirage.tray"
+APP_VERSION = "1.1.0"
+APP_AUTHOR = "Oleg Pustovalov"
+APP_WEBSITE = "https://github.com/OlegEgoism/Mirage"
+
+CONFIG_DIR = Path.home() / ".config" / "mirage"
+CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+CONFIG_FILE = CONFIG_DIR / "settings.json"
+
+ICON_FILE = Path(__file__).parent / "logo_app.png"
+SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
+SUPPORTED_LANGS = ["ru", "en"]
