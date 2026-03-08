@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
-from config import CONFIG_FILE
+from .config import CONFIG_FILE
 
 
 @dataclass

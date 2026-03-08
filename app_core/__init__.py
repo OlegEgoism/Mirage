@@ -1,0 +1,1 @@
+"""Mirage application core package."""

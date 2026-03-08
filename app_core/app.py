@@ -1,4 +1,4 @@
-from mirage_app import main
+from .mirage_app import main
 
 
 if __name__ == "__main__":

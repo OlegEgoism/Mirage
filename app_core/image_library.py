@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import List
 
-from config import SUPPORTED_EXTS
-from settings_store import Settings
+from .config import SUPPORTED_EXTS
+from .settings_store import Settings
 
 
 class ImageLibrary:

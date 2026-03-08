@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable, Optional
 
-from config import APP_WEBSITE, SUPPORTED_EXTS
-from gtk_runtime import Gtk, GdkPixbuf
-from image_library import ImageLibrary
-from settings_store import Settings
+from .config import APP_WEBSITE, SUPPORTED_EXTS
+from .gtk_runtime import Gtk, GdkPixbuf
+from .image_library import ImageLibrary
+from .settings_store import Settings
 
 
 class SettingsDialog(Gtk.Dialog):

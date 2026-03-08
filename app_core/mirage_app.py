@@ -4,13 +4,13 @@ import random
 from pathlib import Path
 from typing import List, Optional
 
-from config import APP_ID, ICON_FILE, SUPPORTED_LANGS
-from gtk_runtime import AppInd, GLib, Gtk
-from image_library import ImageLibrary
-from language import LANGUAGES
-from settings_dialog import SettingsDialog
-from settings_store import Settings
-from wallpaper_engine import WallpaperEngine
+from .config import APP_ID, ICON_FILE, SUPPORTED_LANGS
+from .gtk_runtime import AppInd, GLib, Gtk
+from .image_library import ImageLibrary
+from .language import LANGUAGES
+from .settings_dialog import SettingsDialog
+from .settings_store import Settings
+from .wallpaper_engine import WallpaperEngine
 
 
 class MirageApp:

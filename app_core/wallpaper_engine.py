@@ -1,6 +1,6 @@
 import sys
 
-from gtk_runtime import Gio
+from .gtk_runtime import Gio
 
 
 class WallpaperEngine:
