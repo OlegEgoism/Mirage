@@ -21,14 +21,14 @@ class SettingsDialog(Gtk.Dialog):
     ):
         super().__init__(title=translations["settings_title"], transient_for=parent, flags=0)
         self.set_modal(True)
-        self.set_default_size(360, 540)
+        self.set_default_size(360, 460)
         self.settings = settings
         self.on_save = on_save
         self.on_next = on_next
         self.T = translations
 
         content = self.get_content_area()
-        self.grid = Gtk.Grid(column_spacing=10, row_spacing=10, margin=12)
+        self.grid = Gtk.Grid(column_spacing=8, row_spacing=6, margin=10)
         content.add(self.grid)
 
         self.link_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -56,15 +56,21 @@ class SettingsDialog(Gtk.Dialog):
         self.chk_use_selected = Gtk.CheckButton(label=self.T["use_selected"], active=self.settings.use_selected_only)
 
         self.lbl_selected_count = Gtk.Label(halign=Gtk.Align.START)
+        self.lbl_selected_count.set_xalign(0)
         self.btn_pick = Gtk.Button(label=self.T["pick_images"])
         self.btn_pick.connect("clicked", self._pick_images)
 
         self.lbl_formats = Gtk.Label(halign=Gtk.Align.START)
+        self.lbl_formats.set_xalign(0)
         self.lbl_formats.get_style_context().add_class("dim-label")
+
+        self.lbl_info = Gtk.Label(halign=Gtk.Align.START)
+        self.lbl_info.set_xalign(0)
+        self.lbl_info.get_style_context().add_class("dim-label")
 
         self.lbl_preview = Gtk.Label(label=self.T["current_wallpaper"], halign=Gtk.Align.START)
         self.preview = Gtk.Image()
-        self.preview.set_size_request(220, 130)
+        self.preview.set_size_request(200, 110)
 
         self.btn_next = Gtk.Button(label=self.T["next"])
         self.btn_next.connect("clicked", lambda *_: self.on_next() if self.on_next else None)
@@ -107,10 +113,7 @@ class SettingsDialog(Gtk.Dialog):
         self.grid.attach(self.btn_pick, 1, row, 1, 1)
         row += 1
 
-        self.grid.attach(self.lbl_selected_count, 0, row, 2, 1)
-        row += 1
-
-        self.grid.attach(self.lbl_formats, 0, row, 2, 1)
+        self.grid.attach(self.lbl_info, 0, row, 2, 1)
         row += 1
 
         self.grid.attach(self.lbl_preview, 0, row, 1, 1)
@@ -139,24 +142,32 @@ class SettingsDialog(Gtk.Dialog):
         self.btn_next.set_label(self.T["next"])
         self.btn_save.set_label(self.T["btn_save"])
         self.btn_cancel.set_label(self.T["btn_cancel"])
+        self._update_selected_label()
         self._update_formats_label()
 
     def _update_selected_label(self) -> None:
         count = len(self.settings.selected)
         self.lbl_selected_count.set_text(self.T["selected_count"].format(count=count))
+        self._update_info_label()
 
     def _update_formats_label(self) -> None:
         title = self.T.get("formats_label", "Formats")
         exts_str = ImageLibrary.format_exts_for_label(SUPPORTED_EXTS)
         self.lbl_formats.set_text(f"{title}: {exts_str}")
+        self._update_info_label()
+
+    def _update_info_label(self) -> None:
+        selected = self.lbl_selected_count.get_text()
+        formats = self.lbl_formats.get_text()
+        self.lbl_info.set_text(f"{selected} · {formats}")
 
     def _update_preview(self, path: Optional[str]) -> None:
         if path and Path(path).is_file():
             try:
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
                     path,
-                    width=220,
-                    height=130,
+                    width=200,
+                    height=110,
                     preserve_aspect_ratio=True,
                 )
                 self.preview.set_from_pixbuf(pixbuf)
