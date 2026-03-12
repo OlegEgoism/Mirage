@@ -2,7 +2,7 @@
 "Mirage" Application
 </h1>
 
-<img src="logo_app.png" width="10%" />
+<img src="logo.png" width="10%" />
 
 <h2 style="color: chocolate">
 Application Description and Features
@@ -68,8 +68,8 @@ python3 app.py
 <h3>💡 Launch file "build.sh" (assembly time up to 5 minutes)</h3>
 
 ```bash
-chmod +x build_nuitka.sh
-./build_nuitka.sh
+chmod +x build.sh
+./build.sh
 ```
 
 <h3>💡 Checking the created file Mirage-onefile</h3>

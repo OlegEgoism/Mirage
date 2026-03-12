@@ -4,9 +4,9 @@
 # Структура проекта (из корня репозитория):
 #   app.py
 #   language.py
-#   logo_app.png
+#   logo.png
 #   requirements.txt
-#   build_nuitka.sh
+#   build.sh
 
 set -e
 
@@ -93,7 +93,7 @@ write_desktop_file_menu() {
 echo "🚀 Compiling (standalone)…"
 "$NUITKA_CMD" --standalone \
   --enable-plugin=gi \
-  --include-data-files=logo_app.png=logo_app.png \
+  --include-data-files=logo.png=logo.png \
   --include-data-files=language.py=language.py \
   --assume-yes-for-downloads \
   --output-dir=build_standalone \
@@ -124,7 +124,7 @@ echo "🗜️ Compiling (onefile, experimental)…"
 set +e
 "$NUITKA_CMD" --onefile \
   --enable-plugin=gi \
-  --include-data-files=logo_app.png=logo_app.png \
+  --include-data-files=logo.png=logo.png \
   --include-data-files=language.py=language.py \
   --assume-yes-for-downloads \
   --output-filename="${PACKAGE_NAME}-onefile" \
