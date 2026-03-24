@@ -20,5 +20,6 @@ class WallpaperEngine:
         try:
             self._settings.set_string("picture-uri", uri)
             self._settings.set_string("picture-uri-dark", uri)
+            self._settings.set_string("picture-options", "scaled")
         except Exception as error:
             print(f"[Mirage] Failed to set wallpaper: {error}", file=sys.stderr)

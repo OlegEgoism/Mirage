@@ -7,20 +7,28 @@ from urllib.error import HTTPError
 from pathlib import Path
 from typing import Optional, Sequence
 
-from .config import CACHE_DIR, RANDOM_API_URLS
+from .config import CACHE_DIR, RANDOM_API_HEIGHT, RANDOM_API_URLS, RANDOM_API_WIDTH
 
 
 class RandomImageAPI:
-    def __init__(self, api_urls: Sequence[str] = RANDOM_API_URLS, target_dir: Path = CACHE_DIR) -> None:
+    def __init__(
+        self,
+        api_urls: Sequence[str] = RANDOM_API_URLS,
+        target_dir: Path = CACHE_DIR,
+        width: int = RANDOM_API_WIDTH,
+        height: int = RANDOM_API_HEIGHT,
+    ) -> None:
         self.api_urls = list(api_urls)
         self.target_dir = target_dir
+        self.width = width
+        self.height = height
         self.target_dir.mkdir(parents=True, exist_ok=True)
 
     def fetch_image(self) -> Optional[Path]:
         timestamp = int(time.time())
         target = self.target_dir / f"random_{timestamp}.jpg"
         for api_url in self.api_urls:
-            request_url = f"{api_url}?t={timestamp}"
+            request_url = f"{api_url.format(width=self.width, height=self.height)}?t={timestamp}"
             request = urllib.request.Request(
                 request_url,
                 headers={"User-Agent": "Mozilla/5.0 (Mirage Wallpaper App)"},
@@ -28,6 +36,9 @@ class RandomImageAPI:
 
             try:
                 with urllib.request.urlopen(request, timeout=20) as response:
+                    content_type = response.headers.get("Content-Type", "")
+                    if "image" not in content_type:
+                        raise ValueError(f"Unexpected content type: {content_type}")
                     target.write_bytes(response.read())
                 return target
             except HTTPError as error:
