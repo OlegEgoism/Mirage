@@ -10,7 +10,10 @@ CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_FILE = CONFIG_DIR / "settings.json"
 CACHE_DIR = Path.home() / ".cache" / "mirage"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
-RANDOM_API_URL = "https://picsum.photos/2560/1440"
+RANDOM_API_URLS = [
+    "https://picsum.photos/2560/1440",
+    "https://loremflickr.com/2560/1440/wallpaper",
+]
 
 ICON_FILE = Path(__file__).resolve().parent.parent / "logo_app.png"
 SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
