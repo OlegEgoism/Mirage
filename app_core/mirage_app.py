@@ -117,7 +117,7 @@ class MirageApp:
         if self.settings.use_api_random:
             fetched = self.random_api.fetch_image()
             if fetched:
-                self.wallpaper_engine.set_wallpaper(str(fetched))
+                self.wallpaper_engine.set_wallpaper(str(fetched), picture_option="zoom")
                 self.current_wallpaper = str(fetched)
                 if self.settings_dialog:
                     self.settings_dialog._update_preview(self.current_wallpaper)
@@ -127,7 +127,7 @@ class MirageApp:
             return
 
         current_path = self.playlist[self.index % len(self.playlist)]
-        self.wallpaper_engine.set_wallpaper(str(current_path))
+        self.wallpaper_engine.set_wallpaper(str(current_path), picture_option="scaled")
         self.current_wallpaper = str(current_path)
         if self.settings_dialog:
             self.settings_dialog._update_preview(self.current_wallpaper)

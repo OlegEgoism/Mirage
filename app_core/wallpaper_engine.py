@@ -11,7 +11,7 @@ class WallpaperEngine:
             print(f"[Mirage] Cannot access GNOME background settings: {error}", file=sys.stderr)
             self._settings = None
 
-    def set_wallpaper(self, path: str) -> None:
+    def set_wallpaper(self, path: str, picture_option: str = "scaled") -> None:
         if not self._settings:
             print("[Mirage] Wallpaper engine unavailable", file=sys.stderr)
             return
@@ -20,6 +20,6 @@ class WallpaperEngine:
         try:
             self._settings.set_string("picture-uri", uri)
             self._settings.set_string("picture-uri-dark", uri)
-            self._settings.set_string("picture-options", "scaled")
+            self._settings.set_string("picture-options", picture_option)
         except Exception as error:
             print(f"[Mirage] Failed to set wallpaper: {error}", file=sys.stderr)
