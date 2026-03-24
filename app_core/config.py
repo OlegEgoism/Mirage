@@ -11,4 +11,4 @@ CONFIG_FILE = CONFIG_DIR / "settings.json"
 
 ICON_FILE = Path(__file__).resolve().parent.parent / "logo_app.png"
 SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
-SUPPORTED_LANGS = ["ru", "en"]
+SUPPORTED_LANGS = ["ru", "en", "cn", "de", "it", "es", "tr", "fr"]
