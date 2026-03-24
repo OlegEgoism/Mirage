@@ -16,6 +16,7 @@ class Settings:
     shuffle: bool = True
     recursive: bool = False
     use_selected_only: bool = False
+    use_api_random: bool = False
     selected: List[str] = field(default_factory=list)
     language: str = "ru"
 

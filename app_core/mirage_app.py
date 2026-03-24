@@ -8,6 +8,7 @@ from .config import APP_ID, ICON_FILE, SUPPORTED_LANGS
 from .gtk_runtime import AppInd, GLib, Gtk
 from .image_library import ImageLibrary
 from .language import LANGUAGES
+from .random_image_api import RandomImageAPI
 from .settings_dialog import SettingsDialog
 from .settings_store import Settings
 from .wallpaper_engine import WallpaperEngine
@@ -17,6 +18,7 @@ class MirageApp:
     def __init__(self):
         self.settings = Settings.load()
         self.wallpaper_engine = WallpaperEngine()
+        self.random_api = RandomImageAPI()
         self.playlist: List[Path] = []
         self.index = 0
         self.timer_id: Optional[int] = None
@@ -101,12 +103,26 @@ class MirageApp:
             self.settings_dialog.apply_language(self.T)
 
     def _reload_images(self) -> None:
+        if self.settings.use_api_random:
+            self.playlist = []
+            self.index = 0
+            return
+
         self.playlist = ImageLibrary.effective_selection(self.settings)
         if self.settings.shuffle and self.playlist:
             random.shuffle(self.playlist)
         self.index = 0
 
     def _apply_current(self) -> None:
+        if self.settings.use_api_random:
+            fetched = self.random_api.fetch_image()
+            if fetched:
+                self.wallpaper_engine.set_wallpaper(str(fetched))
+                self.current_wallpaper = str(fetched)
+                if self.settings_dialog:
+                    self.settings_dialog._update_preview(self.current_wallpaper)
+            return
+
         if not self.playlist:
             return
 
@@ -117,6 +133,10 @@ class MirageApp:
             self.settings_dialog._update_preview(self.current_wallpaper)
 
     def next_wallpaper(self) -> None:
+        if self.settings.use_api_random:
+            self._apply_current()
+            return
+
         if not self.playlist:
             return
 

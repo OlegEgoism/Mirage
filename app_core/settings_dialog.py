@@ -53,6 +53,8 @@ class SettingsDialog(Gtk.Dialog):
 
         self.chk_shuffle = Gtk.CheckButton(label=self.T["shuffle"], active=self.settings.shuffle)
         self.chk_recursive = Gtk.CheckButton(label=self.T["recursive"], active=self.settings.recursive)
+        self.chk_api_random = Gtk.CheckButton(label=self.T["use_api_random"], active=self.settings.use_api_random)
+        self.chk_api_random.connect("toggled", self._sync_source_controls)
         self.chk_use_selected = Gtk.CheckButton(label=self.T["use_selected"], active=self.settings.use_selected_only)
 
         self.lbl_selected_count = Gtk.Label(halign=Gtk.Align.START)
@@ -97,6 +99,9 @@ class SettingsDialog(Gtk.Dialog):
         self.grid.attach(self.chk_recursive, 0, row, 2, 1)
         row += 1
 
+        self.grid.attach(self.chk_api_random, 0, row, 2, 1)
+        row += 1
+
         sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
         self.grid.attach(sep, 0, row, 2, 1)
         row += 1
@@ -122,6 +127,7 @@ class SettingsDialog(Gtk.Dialog):
         self._update_selected_label()
         self._update_formats_label()
         self._update_preview(current_wallpaper)
+        self._sync_source_controls()
         self.show_all()
 
     def apply_language(self, translations: dict) -> None:
@@ -133,6 +139,7 @@ class SettingsDialog(Gtk.Dialog):
         self.lbl_interval.set_label(self.T["interval_label"])
         self.chk_shuffle.set_label(self.T["shuffle"])
         self.chk_recursive.set_label(self.T["recursive"])
+        self.chk_api_random.set_label(self.T["use_api_random"])
         self.chk_use_selected.set_label(self.T["use_selected"])
         self.btn_pick.set_label(self.T["pick_images"])
         self.lbl_preview.set_label(self.T["current_wallpaper"])
@@ -164,6 +171,13 @@ class SettingsDialog(Gtk.Dialog):
                 self.preview.set_from_icon_name("image-x-generic", Gtk.IconSize.DIALOG)
         else:
             self.preview.set_from_icon_name("image-missing", Gtk.IconSize.DIALOG)
+
+    def _sync_source_controls(self, *_):
+        use_api_random = self.chk_api_random.get_active()
+        self.btn_folder.set_sensitive(not use_api_random)
+        self.chk_recursive.set_sensitive(not use_api_random)
+        self.chk_use_selected.set_sensitive(not use_api_random)
+        self.btn_pick.set_sensitive(not use_api_random)
 
     def _pick_images(self, *_):
         dialog = Gtk.FileChooserDialog(
@@ -200,6 +214,7 @@ class SettingsDialog(Gtk.Dialog):
         self.settings.interval_minutes = int(self.spin_interval.get_value())
         self.settings.shuffle = self.chk_shuffle.get_active()
         self.settings.recursive = self.chk_recursive.get_active()
+        self.settings.use_api_random = self.chk_api_random.get_active()
         self.settings.use_selected_only = self.chk_use_selected.get_active()
 
         self.settings.save()
