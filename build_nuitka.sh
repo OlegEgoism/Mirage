@@ -94,7 +94,6 @@ echo "🚀 Compiling (standalone)…"
 "$NUITKA_CMD" --standalone \
   --enable-plugin=gi \
   --include-data-files=logo_app.png=logo_app.png \
-  --include-data-files=language.py=language.py \
   --assume-yes-for-downloads \
   --output-dir=build_standalone \
   --follow-imports \
@@ -125,7 +124,6 @@ set +e
 "$NUITKA_CMD" --onefile \
   --enable-plugin=gi \
   --include-data-files=logo_app.png=logo_app.png \
-  --include-data-files=language.py=language.py \
   --assume-yes-for-downloads \
   --output-filename="${PACKAGE_NAME}-onefile" \
   --follow-imports \

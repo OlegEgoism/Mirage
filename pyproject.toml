@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mirage-wallpaper"
+version = "1.1.0"
+description = "GTK tray app for rotating wallpapers on Linux desktops"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Oleg Pustovalov" }
+]
+license = { text = "Proprietary" }
+keywords = ["gtk", "wallpaper", "linux", "tray"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Operating System :: POSIX :: Linux",
+  "Environment :: X11 Applications :: GTK",
+]
+dependencies = [
+  "Pillow>=11.3.0",
+]
+
+[project.scripts]
+mirage = "app_core.mirage_app:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["app_core*"]
+
+[tool.setuptools.package-data]
+app_core = ["*.py"]
