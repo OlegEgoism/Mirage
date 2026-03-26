@@ -26,6 +26,9 @@ LANGUAGES = {
         "images_filter_title": "Изображения",
         "filter_all": "Все файлы",
         "website_label": "GitHub: Mirage",
+        "tab_general": "Общие",
+        "tab_sources": "Источники",
+        "tab_preview": "Предпросмотр",
     },
     "en": {
         "language_name": "🇬🇧 English",
@@ -54,6 +57,9 @@ LANGUAGES = {
         "images_filter_title": "Images",
         "filter_all": "All files",
         "website_label": "GitHub: Mirage",
+        "tab_general": "General",
+        "tab_sources": "Sources",
+        "tab_preview": "Preview",
     },
     "cn": {
         "language_name": "🇨🇳 中文",

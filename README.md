@@ -18,6 +18,7 @@ GTK tray application for automatic wallpaper rotation on Linux.
 - Предпросмотр текущих обоев.
 - Поддерживаемые форматы: JPG, JPEG, PNG, BMP, TIFF, WEBP.
 - Работа из системного трея.
+- Окно настроек разделено на вкладки: Общие, Источники, Предпросмотр.
 
 ### Где хранятся настройки
 - `~/.config/mirage/settings.json`
@@ -75,6 +76,7 @@ mirage
 - Current wallpaper preview.
 - Supported formats: JPG, JPEG, PNG, BMP, TIFF, WEBP.
 - Runs in system tray.
+- Settings UI is split into tabs: General, Sources, Preview.
 
 ### Settings location
 - `~/.config/mirage/settings.json`

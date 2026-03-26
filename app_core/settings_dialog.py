@@ -21,21 +21,13 @@ class SettingsDialog(Gtk.Dialog):
     ):
         super().__init__(title=translations["settings_title"], transient_for=parent, flags=0)
         self.set_modal(True)
-        self.set_default_size(360, 540)
+        self.set_default_size(460, 560)
         self.settings = settings
         self.on_save = on_save
         self.on_next = on_next
         self.T = translations
 
-        content = self.get_content_area()
-        self.grid = Gtk.Grid(column_spacing=10, row_spacing=10, margin=12)
-        content.add(self.grid)
-
-        self.link_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.link_box.set_hexpand(True)
-        self.link_box.set_halign(Gtk.Align.END)
         self.link_button = Gtk.LinkButton(uri=APP_WEBSITE, label=self.T.get("website_label", "GitHub: Mirage"))
-        self.link_box.pack_end(self.link_button, False, False, 0)
 
         self.lbl_folder = Gtk.Label(label=self.T["folder_label"], halign=Gtk.Align.START)
         self.btn_folder = Gtk.FileChooserButton(action=Gtk.FileChooserAction.SELECT_FOLDER)
@@ -66,7 +58,7 @@ class SettingsDialog(Gtk.Dialog):
 
         self.lbl_preview = Gtk.Label(label=self.T["current_wallpaper"], halign=Gtk.Align.START)
         self.preview = Gtk.Image()
-        self.preview.set_size_request(220, 130)
+        self.preview.set_size_request(320, 190)
 
         self.btn_next = Gtk.Button(label=self.T["next"])
         self.btn_next.connect("clicked", lambda *_: self.on_next() if self.on_next else None)
@@ -76,59 +68,84 @@ class SettingsDialog(Gtk.Dialog):
         self.btn_save.connect("clicked", self._on_save)
         self.btn_cancel.connect("clicked", lambda *_: self.response(Gtk.ResponseType.CANCEL))
 
-        self.btn_box = Gtk.Box(spacing=6, halign=Gtk.Align.START)
-        self.btn_box.pack_start(self.btn_next, False, False, 0)
-        self.btn_box.pack_start(self.btn_save, False, False, 0)
-        self.btn_box.pack_start(self.btn_cancel, False, False, 0)
-
-        row = 0
-        self.grid.attach(self.link_box, 0, row, 2, 1)
-        row += 1
-
-        self.grid.attach(self.lbl_folder, 0, row, 1, 1)
-        self.grid.attach(self.btn_folder, 1, row, 1, 1)
-        row += 1
-
-        self.grid.attach(self.lbl_interval, 0, row, 1, 1)
-        self.grid.attach(self.spin_interval, 1, row, 1, 1)
-        row += 1
-
-        self.grid.attach(self.chk_shuffle, 0, row, 2, 1)
-        row += 1
-
-        self.grid.attach(self.chk_recursive, 0, row, 2, 1)
-        row += 1
-
-        self.grid.attach(self.chk_api_random, 0, row, 2, 1)
-        row += 1
-
-        sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-        self.grid.attach(sep, 0, row, 2, 1)
-        row += 1
-
-        self.grid.attach(self.chk_use_selected, 0, row, 2, 1)
-        row += 1
-
-        self.grid.attach(self.btn_pick, 1, row, 1, 1)
-        row += 1
-
-        self.grid.attach(self.lbl_selected_count, 0, row, 2, 1)
-        row += 1
-
-        self.grid.attach(self.lbl_formats, 0, row, 2, 1)
-        row += 1
-
-        self.grid.attach(self.lbl_preview, 0, row, 1, 1)
-        self.grid.attach(self.preview, 1, row, 1, 1)
-        row += 1
-
-        self.grid.attach(self.btn_box, 0, row, 2, 1)
-
+        self._build_layout()
         self._update_selected_label()
         self._update_formats_label()
         self._update_preview(current_wallpaper)
         self._sync_source_controls()
         self.show_all()
+
+    def _build_layout(self) -> None:
+        content = self.get_content_area()
+        root_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=12)
+        content.add(root_box)
+
+        link_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        link_box.set_halign(Gtk.Align.END)
+        link_box.pack_end(self.link_button, False, False, 0)
+        root_box.pack_start(link_box, False, False, 0)
+
+        self.notebook = Gtk.Notebook()
+        self.notebook.set_hexpand(True)
+        self.notebook.set_vexpand(True)
+        root_box.pack_start(self.notebook, True, True, 0)
+
+        tab_general = self._build_general_tab()
+        tab_sources = self._build_sources_tab()
+        tab_preview = self._build_preview_tab()
+
+        self.tab_general_label = Gtk.Label(label=self.T.get("tab_general", "General"))
+        self.tab_sources_label = Gtk.Label(label=self.T.get("tab_sources", "Sources"))
+        self.tab_preview_label = Gtk.Label(label=self.T.get("tab_preview", "Preview"))
+
+        self.notebook.append_page(tab_general, self.tab_general_label)
+        self.notebook.append_page(tab_sources, self.tab_sources_label)
+        self.notebook.append_page(tab_preview, self.tab_preview_label)
+
+        self.btn_box = Gtk.Box(spacing=6, halign=Gtk.Align.END)
+        self.btn_box.pack_start(self.btn_next, False, False, 0)
+        self.btn_box.pack_start(self.btn_cancel, False, False, 0)
+        self.btn_box.pack_start(self.btn_save, False, False, 0)
+        root_box.pack_start(self.btn_box, False, False, 0)
+
+    def _build_general_tab(self) -> Gtk.Box:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=10)
+
+        folder_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        folder_box.pack_start(self.lbl_folder, False, False, 0)
+        folder_box.pack_start(self.btn_folder, False, False, 0)
+
+        interval_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        interval_box.pack_start(self.lbl_interval, False, False, 0)
+        interval_box.pack_start(self.spin_interval, False, False, 0)
+
+        box.pack_start(folder_box, False, False, 0)
+        box.pack_start(interval_box, False, False, 0)
+        box.pack_start(self.chk_shuffle, False, False, 0)
+        box.pack_start(self.chk_recursive, False, False, 0)
+
+        return box
+
+    def _build_sources_tab(self) -> Gtk.Box:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=10)
+
+        pick_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        pick_box.pack_start(self.btn_pick, False, False, 0)
+
+        box.pack_start(self.chk_api_random, False, False, 0)
+        box.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 4)
+        box.pack_start(self.chk_use_selected, False, False, 0)
+        box.pack_start(pick_box, False, False, 0)
+        box.pack_start(self.lbl_selected_count, False, False, 0)
+        box.pack_start(self.lbl_formats, False, False, 0)
+
+        return box
+
+    def _build_preview_tab(self) -> Gtk.Box:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=10)
+        box.pack_start(self.lbl_preview, False, False, 0)
+        box.pack_start(self.preview, True, True, 0)
+        return box
 
     def apply_language(self, translations: dict) -> None:
         self.T = translations
@@ -146,7 +163,11 @@ class SettingsDialog(Gtk.Dialog):
         self.btn_next.set_label(self.T["next"])
         self.btn_save.set_label(self.T["btn_save"])
         self.btn_cancel.set_label(self.T["btn_cancel"])
+        self.tab_general_label.set_label(self.T.get("tab_general", "General"))
+        self.tab_sources_label.set_label(self.T.get("tab_sources", "Sources"))
+        self.tab_preview_label.set_label(self.T.get("tab_preview", "Preview"))
         self._update_formats_label()
+        self._update_selected_label()
 
     def _update_selected_label(self) -> None:
         count = len(self.settings.selected)
@@ -162,8 +183,8 @@ class SettingsDialog(Gtk.Dialog):
             try:
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
                     path,
-                    width=220,
-                    height=130,
+                    width=320,
+                    height=190,
                     preserve_aspect_ratio=True,
                 )
                 self.preview.set_from_pixbuf(pixbuf)
@@ -207,6 +228,7 @@ class SettingsDialog(Gtk.Dialog):
             self._update_selected_label()
             if files:
                 self._update_preview(files[0])
+                self.notebook.set_current_page(2)
         dialog.destroy()
 
     def _on_save(self, *_):
