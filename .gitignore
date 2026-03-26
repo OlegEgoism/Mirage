@@ -1,3 +1,9 @@
+app.dist
+app.build
+app.onefile-build
+Mirage-standalone
 .idea/
 .venv
 venv
+Mirage-onefile
+Mirage-run
