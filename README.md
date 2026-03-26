@@ -75,3 +75,12 @@ chmod +x uninstall_mirage.sh
 ./uninstall_mirage.sh --all --purge -y
 ./uninstall_mirage.sh --all --dry-run
 ```
+
+## Contact
+
+- Author: [OlegEgoism](https://github.com/OlegEgoism)
+- Repository: <https://github.com/OlegEgoism/Mirage>
+- Telegram: [@OlegEgoism](https://t.me/OlegEgoism)
+- Email: olegpustovalov220@gmail.com
+
+<img src="img.png" width="960" alt="SyMo preview" />

@@ -1,6 +1,8 @@
 app.dist
 app.build
 app.onefile-build
+build
+mirage_wallpaper.egg-info
 Mirage-standalone
 .idea/
 .venv
